@@ -1,0 +1,377 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Role {
+  BUYER
+  SELLER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PACKED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum PaymentMethod {
+  COD
+  UPI
+  CARD
+  WALLET
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum SellerStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+  BLOCKED
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String?
+  email         String   @unique
+  phone         String?  @unique
+  password      String
+  role          Role     @default(BUYER)
+  emailVerified Boolean  @default(false)
+  phoneVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sellerProfile SellerProfile?
+  addresses     Address[]
+  cart          Cart?
+  orders        Order[]
+  reviews       Review[]
+  wishlist      WishlistItem[]
+  otps          Otp[]
+}
+
+model SellerProfile {
+  id            String       @id @default(cuid())
+  userId        String       @unique
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName  String
+  businessType  String?
+  gstNumber     String?
+  gstVerified   Boolean      @default(false)
+  gstLegalName  String?
+  gstRegisteredMobile String?
+  gstFailedAttempts Int      @default(0)
+  gstBlockedAt  DateTime?
+  gstBlockReason String?
+  panNumber     String?
+  panVerified   Boolean      @default(false)
+  panFailedAttempts Int      @default(0)
+  bankAccount   String?
+  bankIfsc      String?
+  pickupAddress String?
+  city          String?
+  state         String?
+  pincode       String?
+  status        SellerStatus @default(PENDING)
+  rating        Float        @default(0)
+  totalSales    Int          @default(0)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  products      Product[]
+  notices       SellerNotice[]
+  claims        SellerClaim[]
+  returnRequests ReturnRequest[]
+  categoryRequests CategoryRequest[]
+  activationRequests SellerActivationRequest[]
+}
+
+enum ActivationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model SellerActivationRequest {
+  id        String                  @id @default(cuid())
+  sellerId  String
+  seller    SellerProfile           @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  message   String
+  status    ActivationRequestStatus @default(PENDING)
+  adminNote String?
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+}
+
+enum QcStatus {
+  DRAFT
+  QC_IN_PROGRESS
+  QC_ERROR
+  QC_PASS
+  ACTION_REQUIRED
+}
+
+model Category {
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  icon      String?
+  image     String?
+  keywords  String?
+  parentId  String?
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryTree")
+  products  Product[]
+  sortOrder Int        @default(0)
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+
+  requests CategoryRequest[]
+}
+
+enum CategoryRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model CategoryRequest {
+  id               String                @id @default(cuid())
+  sellerId         String
+  seller           SellerProfile         @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  name             String
+  parentCategoryId String?
+  parentCategory   Category?             @relation(fields: [parentCategoryId], references: [id])
+  productExample   String?
+  status           CategoryRequestStatus @default(PENDING)
+  adminNote        String?
+  createdCategoryId String?
+  createdAt        DateTime              @default(now())
+}
+
+model Product {
+  id          String         @id @default(cuid())
+  name        String
+  slug        String         @unique
+  description String
+  price       Float
+  mrp         Float
+  discount    Int            @default(0)
+  stock       Int            @default(0)
+  sku         String?
+  brand       String?
+  images      ProductImage[]
+  categoryId  String
+  category    Category       @relation(fields: [categoryId], references: [id])
+  sellerId    String
+  seller      SellerProfile  @relation(fields: [sellerId], references: [id])
+  rating      Float          @default(0)
+  reviewCount Int            @default(0)
+  isActive    Boolean        @default(true)
+  isFeatured  Boolean        @default(false)
+  isDeal      Boolean        @default(false)
+  tags        String?
+  viewCount   Int            @default(0)
+  qcStatus    QcStatus       @default(QC_IN_PROGRESS)
+  catalogFileId String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  reviews       Review[]
+  wishlistItems WishlistItem[]
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  url       String
+  alt       String?
+  isPrimary Boolean @default(false)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int     @default(1)
+
+  @@unique([cartId, productId])
+}
+
+model Address {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  phone     String
+  line1     String
+  line2     String?
+  city      String
+  state     String
+  pincode   String
+  isDefault Boolean @default(false)
+  orders    Order[]
+}
+
+model Order {
+  id            String        @id @default(cuid())
+  orderNumber   String        @unique
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  addressId     String
+  address       Address       @relation(fields: [addressId], references: [id])
+  status        OrderStatus   @default(PENDING)
+  paymentMethod PaymentMethod @default(COD)
+  paymentStatus PaymentStatus @default(PENDING)
+  subtotal      Float
+  discount      Float         @default(0)
+  shipping      Float         @default(0)
+  total         Float
+  items         OrderItem[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float
+  sellerId  String
+  labelDownloaded Boolean @default(false)
+  returnRequests ReturnRequest[]
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+}
+
+model WishlistItem {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+}
+
+model Banner {
+  id        String   @id @default(cuid())
+  title     String
+  subtitle  String?
+  image     String
+  link      String?
+  bgColor   String?
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model Otp {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  target    String
+  type      String
+  code      String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model SellerAnnouncement {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  link        String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model SellerNotice {
+  id        String         @id @default(cuid())
+  sellerId  String?
+  seller    SellerProfile? @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  isRead    Boolean        @default(false)
+  createdAt DateTime       @default(now())
+}
+
+enum ReturnStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+model ReturnRequest {
+  id          String       @id @default(cuid())
+  orderItemId String
+  orderItem   OrderItem    @relation(fields: [orderItemId], references: [id])
+  sellerId    String
+  seller      SellerProfile @relation(fields: [sellerId], references: [id])
+  reason      String
+  status      ReturnStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+}
+
+enum ClaimStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  REJECTED
+}
+
+model SellerClaim {
+  id          String       @id @default(cuid())
+  sellerId    String
+  seller      SellerProfile @relation(fields: [sellerId], references: [id])
+  title       String
+  description String
+  status      ClaimStatus  @default(OPEN)
+  createdAt   DateTime     @default(now())
+}
