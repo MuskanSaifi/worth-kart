@@ -3,6 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { checkoutSchema } from "@/lib/validations";
 import { generateOrderNumber } from "@/lib/utils";
+import {
+  createCashfreePgOrder,
+  isOnlinePaymentMethod,
+} from "@/lib/cashfree-pg";
+import { cashfreePgMode, getCashfreePgConfigError, isCashfreePgConfigured } from "@/lib/cashfree";
+import { cancelPendingOrder } from "@/lib/order-fulfillment";
 
 export async function GET() {
   try {
@@ -49,6 +55,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid address" }, { status: 400 });
     }
 
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { email: true, phone: true, name: true },
+    });
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 400 });
+    }
+
     const subtotal = cart.items.reduce(
       (sum, item) => sum + item.product.price * item.quantity,
       0
@@ -56,43 +70,137 @@ export async function POST(req: NextRequest) {
     const shipping = subtotal > 499 ? 0 : 40;
     const total = subtotal + shipping;
 
-    const order = await prisma.$transaction(async (tx) => {
-      const newOrder = await tx.order.create({
-        data: {
-          orderNumber: generateOrderNumber(),
-          userId: session.user.id,
-          addressId: address.id,
-          paymentMethod: parsed.data.paymentMethod,
-          paymentStatus: parsed.data.paymentMethod === "COD" ? "PENDING" : "PAID",
-          status: "CONFIRMED",
-          subtotal,
-          shipping,
-          total,
-          items: {
-            create: cart.items.map((item) => ({
-              productId: item.productId,
-              quantity: item.quantity,
-              price: item.product.price,
-              sellerId: item.product.sellerId,
-            })),
+    const paymentMethod =
+      parsed.data.paymentMethod === "ONLINE" ||
+      parsed.data.paymentMethod === "UPI" ||
+      parsed.data.paymentMethod === "CARD" ||
+      parsed.data.paymentMethod === "WALLET"
+        ? "ONLINE"
+        : "COD";
+
+    const isOnline = isOnlinePaymentMethod(paymentMethod);
+
+    if (isOnline && !isCashfreePgConfigured()) {
+      return NextResponse.json(
+        { error: "Online payment is not configured. Please use Cash on Delivery." },
+        { status: 503 }
+      );
+    }
+
+    const cashfreeConfigError = isOnline ? getCashfreePgConfigError() : null;
+    if (cashfreeConfigError) {
+      return NextResponse.json({ error: cashfreeConfigError }, { status: 503 });
+    }
+
+    const orderNumber = generateOrderNumber();
+
+    if (!isOnline) {
+      const order = await prisma.$transaction(async (tx) => {
+        const newOrder = await tx.order.create({
+          data: {
+            orderNumber,
+            userId: session.user.id,
+            addressId: address.id,
+            paymentMethod: "COD",
+            paymentStatus: "PENDING",
+            status: "CONFIRMED",
+            subtotal,
+            shipping,
+            total,
+            items: {
+              create: cart.items.map((item) => ({
+                productId: item.productId,
+                quantity: item.quantity,
+                price: item.product.price,
+                sellerId: item.product.sellerId,
+              })),
+            },
           },
-        },
-        include: { items: true },
+          include: { items: true },
+        });
+
+        for (const item of cart.items) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stock: { decrement: item.quantity } },
+          });
+        }
+
+        await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+        return newOrder;
       });
 
-      for (const item of cart.items) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } },
-        });
-      }
+      const { recordOrderEvent } = await import("@/lib/order-lifecycle");
+      await recordOrderEvent({
+        orderId: order.id,
+        status: "CONFIRMED",
+        title: "Order placed",
+        message: "Cash on Delivery order confirmed.",
+        source: "system",
+      });
+      const { notifyOrderStatusChange } = await import("@/lib/order-notifications");
+      void notifyOrderStatusChange(order.id, "CONFIRMED").catch(() => null);
 
-      await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
-      return newOrder;
+      return NextResponse.json({ order }, { status: 201 });
+    }
+
+    const order = await prisma.order.create({
+      data: {
+        orderNumber,
+        userId: session.user.id,
+        addressId: address.id,
+        paymentMethod: "ONLINE",
+        paymentStatus: "PENDING",
+        status: "PENDING",
+        subtotal,
+        shipping,
+        total,
+        items: {
+          create: cart.items.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.product.price,
+            sellerId: item.product.sellerId,
+          })),
+        },
+      },
+      include: { items: true },
     });
 
-    return NextResponse.json({ order }, { status: 201 });
-  } catch {
+    try {
+      const pgOrder = await createCashfreePgOrder({
+        orderId: order.orderNumber,
+        amount: total,
+        customerId: session.user.id,
+        customerName: address.name || user.name || "Customer",
+        customerEmail: user.email,
+        customerPhone: address.phone || user.phone || "9999999999",
+        orderNote: `WorthKart order ${order.orderNumber}`,
+      });
+
+      return NextResponse.json(
+        {
+          order,
+          paymentSessionId: pgOrder.payment_session_id,
+          cashfreeMode: cashfreePgMode(),
+        },
+        { status: 201 }
+      );
+    } catch (error) {
+      await cancelPendingOrder(order.id);
+      console.error("[cashfree] create order failed:", error);
+      return NextResponse.json(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : "Could not start online payment. Try again or use COD.",
+        },
+        { status: 502 }
+      );
+    }
+  } catch (error) {
+    console.error("[orders] checkout failed:", error);
     return NextResponse.json({ error: "Checkout failed" }, { status: 500 });
   }
 }

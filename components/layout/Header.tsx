@@ -9,11 +9,19 @@ import { MapPin, Download, Store, ChevronDown, HelpCircle, Package } from "lucid
 export async function Header() {
   const session = await auth();
 
-  const topCategories = await prisma.category.findMany({
-    where: { parentId: null },
-    orderBy: { sortOrder: "asc" },
-    take: 10,
-  });
+  let topCategories: Awaited<ReturnType<typeof prisma.category.findMany>> = [];
+  try {
+    topCategories = await prisma.category.findMany({
+      where: { parentId: null },
+      orderBy: { sortOrder: "asc" },
+      take: 10,
+    });
+  } catch (error) {
+    console.error(
+      "[Header] MongoDB connection failed. Whitelist your IP in Atlas → Network Access:",
+      error instanceof Error ? error.message : error
+    );
+  }
 
   return (
     <header className="sticky top-0 z-50 shadow-md">
@@ -67,20 +75,22 @@ export async function Header() {
       {/* Category nav */}
       <div className="bg-white border-b border-border hidden md:block">
         <div className="max-w-7xl mx-auto px-4">
-          <nav className="flex items-center gap-1 overflow-x-auto scrollbar-hide py-2">
+          <nav className="flex items-center gap-1 py-2">
             <CategoryMegaMenu />
-            {topCategories.map((cat) => (
-              <Link
-                key={cat.id}
-                href={`/products?category=${cat.slug}`}
-                className="px-3 py-1.5 text-sm text-foreground hover:text-primary hover:bg-purple-50 rounded transition-colors whitespace-nowrap"
-              >
-                {cat.name}
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide flex-1 min-w-0">
+              {topCategories.map((cat) => (
+                <Link
+                  key={cat.id}
+                  href={`/products?category=${cat.slug}`}
+                  className="px-3 py-1.5 text-sm text-foreground hover:text-primary hover:bg-purple-50 rounded transition-colors whitespace-nowrap"
+                >
+                  {cat.name}
+                </Link>
+              ))}
+              <Link href="/products?deal=true" className="px-3 py-1.5 text-sm font-semibold text-[#ff4747] hover:bg-red-50 rounded whitespace-nowrap">
+                Offer Zone
               </Link>
-            ))}
-            <Link href="/products?deal=true" className="px-3 py-1.5 text-sm font-semibold text-[#ff4747] hover:bg-red-50 rounded whitespace-nowrap">
-              Offer Zone
-            </Link>
+            </div>
           </nav>
         </div>
       </div>

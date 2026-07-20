@@ -43,12 +43,14 @@ export function OtpModal({ type, target, devOtp, onClose, onVerified, onError }:
           Enter 4-digit OTP sent to <strong>{target}</strong>
         </p>
         <p className="text-xs text-muted mb-4">
-          4-digit OTP via 2Factor — email from info@worthkart.in
+          {type === "email"
+            ? "Real 4-digit OTP sent to your email (2Factor template)"
+            : "Real 4-digit OTP via SMS (TWO_FACTOR_OTP_TEMPLATE)"}
         </p>
 
         {devOtp && (
           <p className="text-xs bg-yellow-50 text-yellow-800 p-2 rounded mb-3">
-            Dev OTP (2Factor not configured): <strong>{devOtp}</strong>
+            Dev OTP only (2Factor API key missing): <strong>{devOtp}</strong>
           </p>
         )}
 

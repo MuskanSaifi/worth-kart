@@ -90,6 +90,23 @@ export const sellerStep2Schema = z.object({
   { message: "Please verify GSTIN before registering", path: ["gstNumber"] }
 );
 
+export const sellerBankDetailsSchema = z.object({
+  bankAccount: z
+    .string()
+    .regex(/^\d{9,18}$/, "Enter valid bank account number (9–18 digits)"),
+  bankIfsc: z
+    .string()
+    .regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, "Invalid IFSC code"),
+  confirmBankAccount: z.string(),
+  accountHolderName: z
+    .string()
+    .min(2, "Account holder name is required")
+    .max(80, "Name too long"),
+}).refine((data) => data.bankAccount === data.confirmBankAccount, {
+  message: "Account numbers do not match",
+  path: ["confirmBankAccount"],
+});
+
 export const otpSendSchema = z.object({
   target: z.string().min(1),
   type: z.enum(["email", "phone"]),
@@ -107,6 +124,11 @@ export const buyerRegisterSchema = registerSchema
     phoneVerified: z.literal(true, { message: "Please verify mobile OTP" }),
   });
 
+export const uploadedImageSchema = z.object({
+  url: z.string().url(),
+  publicId: z.string().min(1).optional(),
+});
+
 export const productSchema = z.object({
   name: z.string().min(3, "Product name is required"),
   description: z.string().min(10, "Description is required"),
@@ -115,7 +137,8 @@ export const productSchema = z.object({
   stock: z.number().int().min(0),
   categoryId: z.string().min(1),
   brand: z.string().optional(),
-  images: z.array(z.string().url()).min(1, "At least one image required"),
+  tags: z.string().optional(),
+  images: z.array(uploadedImageSchema).min(1, "At least one image required"),
 });
 
 export const addressSchema = z.object({
@@ -136,7 +159,7 @@ export const reviewSchema = z.object({
 
 export const checkoutSchema = z.object({
   addressId: z.string().min(1),
-  paymentMethod: z.enum(["COD", "UPI", "CARD", "WALLET"]),
+  paymentMethod: z.enum(["COD", "ONLINE", "UPI", "CARD", "WALLET"]),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;

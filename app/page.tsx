@@ -17,7 +17,7 @@ export default async function HomePage() {
       <CategoryIcons />
       <ProductSection
         title="Deals of the Day"
-        fetchUrl="/api/products?deal=true&limit=10"
+        fetchUrl="/api/products?deal=true&limit=10&sort=best"
         viewAllHref="/products?deal=true"
         showTimer
       />
@@ -29,7 +29,7 @@ export default async function HomePage() {
       />
       <ProductSection
         title="Top Picks for You"
-        fetchUrl="/api/products?featured=true&limit=10"
+        fetchUrl="/api/products?featured=true&limit=10&sort=best"
         viewAllHref="/products?featured=true"
       />
       <BrandStrip />

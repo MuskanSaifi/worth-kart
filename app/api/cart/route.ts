@@ -12,7 +12,10 @@ export async function GET() {
         items: {
           include: {
             product: {
-              include: { images: { where: { isPrimary: true }, take: 1 } },
+              include: {
+                images: { where: { isPrimary: true }, take: 1 },
+                seller: { select: { businessName: true } },
+              },
             },
           },
         },
@@ -66,7 +69,7 @@ export async function POST(req: NextRequest) {
       include: {
         items: {
           include: {
-            product: { include: { images: { where: { isPrimary: true }, take: 1 } } },
+            product: { include: { images: { where: { isPrimary: true }, take: 1 }, seller: { select: { businessName: true } } } },
           },
         },
       },

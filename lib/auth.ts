@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validations";
 import { authConfig } from "@/lib/auth.config";
+import { isOtpVerifiedRecently } from "@/lib/otp-check";
 import type { Role } from "@/app/generated/prisma/client";
 
 declare module "next-auth" {
@@ -31,6 +32,8 @@ declare module "@auth/core/jwt" {
   }
 }
 
+const LOGIN_OTP_WINDOW_MINUTES = 10;
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   providers: [
@@ -43,14 +46,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const parsed = loginSchema.safeParse(credentials);
         if (!parsed.success) return null;
 
+        const email = parsed.data.email.trim().toLowerCase();
         const user = await prisma.user.findUnique({
-          where: { email: parsed.data.email },
+          where: { email },
         });
 
         if (!user) return null;
 
         const valid = await bcrypt.compare(parsed.data.password, user.password);
         if (!valid) return null;
+
+        // Require real 2Factor OTP verified just before login (buyer / seller / admin)
+        const phone = user.phone?.replace(/\D/g, "").slice(-10);
+        const phoneOk = phone
+          ? await isOtpVerifiedRecently(phone, "phone", LOGIN_OTP_WINDOW_MINUTES)
+          : false;
+        const emailOk = await isOtpVerifiedRecently(
+          user.email,
+          "email",
+          LOGIN_OTP_WINDOW_MINUTES
+        );
+        if (!phoneOk && !emailOk) {
+          return null;
+        }
 
         return {
           id: user.id,

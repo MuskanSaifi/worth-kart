@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Upload, ImageIcon, HelpCircle, ExternalLink } from "lucide-react";
+import { Upload, ImageIcon, HelpCircle, ExternalLink, Trash2 } from "lucide-react";
 import { SellerPageHeader } from "@/components/seller/SellerPageHeader";
 
 interface CatalogProduct {
@@ -40,6 +40,20 @@ function CatalogContent() {
   const tab = searchParams.get("status") || "all";
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [stats, setStats] = useState({ total: 0, single: 0, bulk: 0, qcPass: 0 });
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const deleteProduct = async (id: string, name: string) => {
+    if (!confirm(`Delete "${name}"? Images will be removed from Cloudinary.`)) return;
+    setDeletingId(id);
+    const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
+    const data = await res.json();
+    setDeletingId(null);
+    if (!res.ok) {
+      alert(data.error || "Delete failed");
+      return;
+    }
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+  };
 
   useEffect(() => {
     fetch(`/api/seller/catalog?status=${tab}`)
@@ -156,9 +170,20 @@ function CatalogContent() {
                   </span>
                 </td>
                 <td className="p-3">
-                  <Link href={`/products/${p.slug}`} className="text-[#5c59e8] text-xs font-semibold hover:underline">
-                    View Catalog
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link href={`/products/${p.slug}`} className="text-[#5c59e8] text-xs font-semibold hover:underline">
+                      View
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => deleteProduct(p.id, p.name)}
+                      disabled={deletingId === p.id}
+                      className="text-red-600 text-xs font-semibold hover:underline disabled:opacity-50 flex items-center gap-1"
+                    >
+                      <Trash2 size={12} />
+                      {deletingId === p.id ? "..." : "Delete"}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

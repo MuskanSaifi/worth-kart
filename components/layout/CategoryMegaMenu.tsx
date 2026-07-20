@@ -32,8 +32,6 @@ export function CategoryMegaMenu() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const subChildren = hoveredSub?.children || hoveredRoot?.children || [];
-
   return (
     <div ref={ref} className="relative">
       <button
@@ -43,71 +41,79 @@ export function CategoryMegaMenu() {
         Categories <ChevronDown size={14} className={open ? "rotate-180" : ""} />
       </button>
 
-      {open && tree.length > 0 && (
-        <div className="absolute left-0 top-full mt-0 z-50 flex bg-white shadow-2xl border border-gray-200 rounded-b-lg overflow-hidden min-h-[400px]">
-          {/* Level 1 */}
-          <div className="w-52 bg-gray-50 border-r border-gray-100 overflow-y-auto max-h-[420px]">
-            {tree.map((cat) => (
-              <button
-                key={cat.id}
-                onMouseEnter={() => { setHoveredRoot(cat); setHoveredSub(null); }}
-                className={`w-full flex items-center justify-between px-4 py-2.5 text-sm text-left ${
-                  hoveredRoot?.id === cat.id ? "bg-white font-medium text-primary" : "hover:bg-white text-gray-700"
-                }`}
-              >
-                {cat.name}
-                {cat.children && cat.children.length > 0 && <ChevronRight size={14} />}
-              </button>
-            ))}
-          </div>
-
-          {/* Level 2 */}
-          {hoveredRoot && hoveredRoot.children && hoveredRoot.children.length > 0 && (
-            <div className="w-52 border-r border-gray-100 overflow-y-auto max-h-[420px]">
-              {hoveredRoot.children.map((sub) => (
-                <button
-                  key={sub.id}
-                  onMouseEnter={() => setHoveredSub(sub)}
-                  className={`w-full flex items-center justify-between px-4 py-2.5 text-sm text-left ${
-                    hoveredSub?.id === sub.id ? "bg-purple-50 font-medium text-primary" : "hover:bg-gray-50 text-gray-700"
-                  }`}
-                >
-                  {sub.name}
-                  {sub.children && sub.children.length > 0 && <ChevronRight size={14} />}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Level 3+ */}
-          {subChildren.length > 0 && hoveredSub && (
-            <div className="w-52 overflow-y-auto max-h-[420px] p-2">
-              {hoveredSub.children!.map((leaf) => (
-                <Link
-                  key={leaf.id}
-                  href={`/products?category=${leaf.slug}`}
-                  onClick={() => setOpen(false)}
-                  className="block px-3 py-2 text-sm text-gray-600 hover:text-primary hover:bg-purple-50 rounded"
-                >
-                  {leaf.name}
-                </Link>
-              ))}
-            </div>
-          )}
-
-          {/* Fallback links for level 2 leaves */}
-          {hoveredRoot && !hoveredSub && hoveredRoot.children?.map((sub) =>
-            (!sub.children || sub.children.length === 0) ? (
-              <div key={sub.id} className="w-52 p-2">
-                <Link
-                  href={`/products?category=${sub.slug}`}
-                  onClick={() => setOpen(false)}
-                  className="block px-3 py-2 text-sm hover:text-primary hover:bg-purple-50 rounded"
-                >
-                  {sub.name}
-                </Link>
+      {open && (
+        <div className="absolute left-0 top-full mt-0 z-[100] flex bg-white shadow-2xl border border-gray-200 rounded-b-lg overflow-hidden min-h-[320px] min-w-[208px]">
+          {tree.length === 0 ? (
+            <div className="w-52 p-4 text-sm text-gray-400">Loading categories...</div>
+          ) : (
+            <>
+              {/* Level 1 */}
+              <div className="w-52 bg-gray-50 border-r border-gray-100 overflow-y-auto max-h-[420px]">
+                {tree.map((cat) => (
+                  <Link
+                    key={cat.id}
+                    href={`/products?category=${cat.slug}`}
+                    onMouseEnter={() => { setHoveredRoot(cat); setHoveredSub(null); }}
+                    onClick={() => setOpen(false)}
+                    className={`w-full flex items-center justify-between px-4 py-2.5 text-sm text-left ${
+                      hoveredRoot?.id === cat.id ? "bg-white font-medium text-primary" : "hover:bg-white text-gray-700"
+                    }`}
+                  >
+                    {cat.name}
+                    {cat.children && cat.children.length > 0 && <ChevronRight size={14} />}
+                  </Link>
+                ))}
               </div>
-            ) : null
+
+              {/* Level 2 */}
+              {hoveredRoot && hoveredRoot.children && hoveredRoot.children.length > 0 && (
+                <div className="w-52 border-r border-gray-100 overflow-y-auto max-h-[420px]">
+                  {hoveredRoot.children.map((sub) =>
+                    sub.children && sub.children.length > 0 ? (
+                      <button
+                        key={sub.id}
+                        type="button"
+                        onMouseEnter={() => setHoveredSub(sub)}
+                        className={`w-full flex items-center justify-between px-4 py-2.5 text-sm text-left ${
+                          hoveredSub?.id === sub.id ? "bg-purple-50 font-medium text-primary" : "hover:bg-gray-50 text-gray-700"
+                        }`}
+                      >
+                        {sub.name}
+                        <ChevronRight size={14} />
+                      </button>
+                    ) : (
+                      <Link
+                        key={sub.id}
+                        href={`/products?category=${sub.slug}`}
+                        onMouseEnter={() => setHoveredSub(sub)}
+                        onClick={() => setOpen(false)}
+                        className={`w-full flex items-center justify-between px-4 py-2.5 text-sm text-left ${
+                          hoveredSub?.id === sub.id ? "bg-purple-50 font-medium text-primary" : "hover:bg-gray-50 text-gray-700"
+                        }`}
+                      >
+                        {sub.name}
+                      </Link>
+                    )
+                  )}
+                </div>
+              )}
+
+              {/* Level 3 */}
+              {hoveredSub && hoveredSub.children && hoveredSub.children.length > 0 && (
+                <div className="w-52 overflow-y-auto max-h-[420px] p-2">
+                  {hoveredSub.children.map((leaf) => (
+                    <Link
+                      key={leaf.id}
+                      href={`/products?category=${leaf.slug}`}
+                      onClick={() => setOpen(false)}
+                      className="block px-3 py-2 text-sm text-gray-600 hover:text-primary hover:bg-purple-50 rounded"
+                    >
+                      {leaf.name}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

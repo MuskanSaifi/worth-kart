@@ -1,13 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { buildBreadcrumb } from "@/lib/categories";
+import { buildBreadcrumb, buildCategoryNavigation } from "@/lib/categories";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+    const navigate = req.nextUrl.searchParams.get("navigate") === "true";
+
+    if (navigate) {
+      const all = await prisma.category.findMany({
+        where: { isActive: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          parentId: true,
+          sortOrder: true,
+          _count: { select: { children: true, products: true } },
+        },
+      });
+      const nav = buildCategoryNavigation(all, id);
+      return NextResponse.json(nav);
+    }
 
     const category = await prisma.category.findUnique({
       where: { id },

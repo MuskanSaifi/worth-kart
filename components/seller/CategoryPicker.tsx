@@ -86,16 +86,22 @@ export function CategoryPicker({ onSelect, onContinue, selectedId }: CategoryPic
   };
 
   const selectFromSearch = async (result: SearchResult) => {
-    if (!result.isLeaf) {
-      // Load full path and expand columns
-      setSearch("");
-      setShowSearch(false);
-      return;
-    }
     setSearch("");
     setShowSearch(false);
-    setBreadcrumb(result.breadcrumb);
-    onSelect(result.id, result.breadcrumb);
+
+    if (result.isLeaf) {
+      setBreadcrumb(result.breadcrumb);
+      onSelect(result.id, result.breadcrumb);
+      return;
+    }
+
+    const res = await fetch(`/api/categories/${result.id}?navigate=true`);
+    const data = await res.json();
+    if (res.ok && data.columns) {
+      setColumns(data.columns);
+      setSelectedPath(data.selectedPath || []);
+      setBreadcrumb([]);
+    }
   };
 
   const submitCategoryRequest = async () => {
@@ -225,7 +231,7 @@ export function CategoryPicker({ onSelect, onContinue, selectedId }: CategoryPic
                   onClick={onContinue}
                   className="mt-auto w-full bg-[#5c59e8] text-white py-3 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 hover:bg-[#4a47c7] transition-colors"
                 >
-                  <Upload size={16} /> Add Product Details
+                  <Upload size={16} /> Add Product Images
                 </button>
               )}
             </>

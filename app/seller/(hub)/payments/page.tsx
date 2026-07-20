@@ -39,9 +39,11 @@ export default function SellerPaymentsPage() {
         </SellerCard>
         <SellerCard>
           <p className="font-semibold mb-2">Bank Details</p>
-          <p className="text-sm text-gray-500">Update your bank account in Warehouse settings for payouts</p>
+          <p className="text-sm text-gray-500">
+            Add or update your bank account in Warehouse to receive weekly payouts.
+          </p>
           <a href="/seller/warehouse" className="text-sm text-[#5c59e8] font-semibold mt-2 inline-block hover:underline">
-            Update Bank Details →
+            Manage Bank Details →
           </a>
         </SellerCard>
       </div>

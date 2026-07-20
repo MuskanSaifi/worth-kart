@@ -4,7 +4,10 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
-import { Package } from "lucide-react";
+import { Package, ChevronRight } from "lucide-react";
+import { OrderTrackingProgress } from "@/components/orders/OrderTrackingProgress";
+import { PushNotificationToggle } from "@/components/orders/PushNotificationToggle";
+import { getTrackingHeadline } from "@/lib/order-status";
 
 interface Order {
   id: string;
@@ -12,6 +15,7 @@ interface Order {
   status: string;
   total: number;
   createdAt: string;
+  estimatedDeliveryAt?: string | null;
   items: { quantity: number; price: number; product: { name: string; images: { url: string }[] } }[];
 }
 
@@ -20,6 +24,7 @@ const statusColors: Record<string, string> = {
   CONFIRMED: "bg-blue-100 text-blue-700",
   PACKED: "bg-indigo-100 text-indigo-700",
   SHIPPED: "bg-purple-100 text-purple-700",
+  OUT_FOR_DELIVERY: "bg-orange-100 text-orange-700",
   DELIVERED: "bg-green-100 text-green-700",
   CANCELLED: "bg-red-100 text-red-700",
 };
@@ -49,22 +54,43 @@ export default function OrdersPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6">
-      <h1 className="text-xl font-bold mb-6">My Orders</h1>
+      <div className="flex items-center justify-between mb-6 gap-3">
+        <h1 className="text-xl font-bold">My Orders</h1>
+        <PushNotificationToggle />
+      </div>
       <div className="space-y-4">
         {orders.map((order) => (
-          <div key={order.id} className="bg-card rounded-lg border border-border p-4">
+          <Link
+            key={order.id}
+            href={`/orders/${order.id}`}
+            className="block bg-card rounded-lg border border-border p-4 hover:border-[#007185]/40 transition-colors"
+          >
             <div className="flex items-center justify-between mb-3">
               <div>
                 <p className="text-sm font-semibold">{order.orderNumber}</p>
                 <p className="text-xs text-muted">{new Date(order.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</p>
               </div>
-              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusColors[order.status] || "bg-gray-100"}`}>
-                {order.status}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusColors[order.status] || "bg-gray-100"}`}>
+                  {getTrackingHeadline(order.status, order.estimatedDeliveryAt)}
+                </span>
+                <ChevronRight size={16} className="text-muted" />
+              </div>
             </div>
+
+            {order.status !== "CANCELLED" && order.status !== "RETURNED" && (
+              <div className="mb-4">
+                <OrderTrackingProgress
+                  status={order.status}
+                  estimatedDeliveryAt={order.estimatedDeliveryAt}
+                  showHeadline={false}
+                />
+              </div>
+            )}
+
             {order.items.map((item, i) => (
               <div key={i} className="flex items-center gap-3 py-2 border-t border-border first:border-0">
-                <div className="w-14 h-14 bg-gray-50 rounded flex-shrink-0">
+                <div className="w-14 h-14 bg-gray-50 rounded flex-shrink-0 relative">
                   {item.product.images[0] && (
                     <Image src={item.product.images[0].url} alt="" width={56} height={56} className="object-contain" unoptimized />
                   )}
@@ -80,7 +106,7 @@ export default function OrdersPage() {
               <span className="text-sm text-muted">Total</span>
               <span className="font-bold">{formatPrice(order.total)}</span>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>

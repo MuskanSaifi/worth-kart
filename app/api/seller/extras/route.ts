@@ -58,10 +58,40 @@ export async function POST(req: NextRequest) {
     }
 
     if (body.type === "return_action") {
-      await prisma.returnRequest.update({
+      const updated = await prisma.returnRequest.update({
         where: { id: body.returnId },
         data: { status: body.status },
+        include: { orderItem: true },
       });
+
+      if (body.status === "COMPLETED" || body.status === "APPROVED") {
+        const { transitionOrderStatus, recordOrderEvent } = await import("@/lib/order-lifecycle");
+        if (body.status === "COMPLETED") {
+          await transitionOrderStatus({
+            orderId: updated.orderItem.orderId,
+            status: "RETURNED",
+            source: "seller",
+            allowTerminal: true,
+            title: "Order returned",
+            message: "Return completed by seller.",
+          }).catch(async () => {
+            await recordOrderEvent({
+              orderId: updated.orderItem.orderId,
+              status: "RETURNED",
+              title: "Return completed",
+              source: "seller",
+            });
+          });
+        } else {
+          await recordOrderEvent({
+            orderId: updated.orderItem.orderId,
+            title: "Return approved",
+            message: "Seller approved the return request.",
+            source: "seller",
+          });
+        }
+      }
+
       return NextResponse.json({ success: true });
     }
 

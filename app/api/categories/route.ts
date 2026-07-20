@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { buildBreadcrumb } from "@/lib/categories";
+import { searchCategories } from "@/lib/category-search";
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,28 +15,7 @@ export async function GET(req: NextRequest) {
         include: { _count: { select: { children: true } } },
         orderBy: { name: "asc" },
       });
-      const map = new Map(all.map((c) => [c.id, c]));
-      const query = search.toLowerCase();
-      const terms = query.split(/\s+/).filter(Boolean);
-
-      const results = all
-        .filter((c) => {
-          const haystack = `${c.name} ${c.keywords || ""} ${c.slug.replace(/-/g, " ")}`.toLowerCase();
-          return terms.every((t) => haystack.includes(t));
-        })
-        .map((c) => {
-          const breadcrumb = buildBreadcrumb(map, c.id);
-          return {
-            id: c.id,
-            name: c.name,
-            slug: c.slug,
-            breadcrumb,
-            breadcrumbText: breadcrumb.join(" > "),
-            isLeaf: c._count.children === 0,
-          };
-        })
-        .slice(0, 20);
-
+      const results = searchCategories(all, search);
       return NextResponse.json({ results });
     }
 

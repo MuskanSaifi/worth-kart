@@ -9,9 +9,13 @@ interface CartItem {
   product: {
     id: string;
     name: string;
+    slug?: string;
     price: number;
     mrp: number;
+    discount?: number;
+    brand?: string | null;
     images: { url: string }[];
+    seller?: { businessName: string } | null;
   };
 }
 

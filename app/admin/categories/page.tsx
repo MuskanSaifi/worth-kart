@@ -1,8 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { Plus, Trash2, ChevronRight, FolderTree } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import {
+  Plus,
+  Trash2,
+  ChevronRight,
+  ChevronDown,
+  Folder,
+  FolderOpen,
+  Tag,
+  X,
+} from "lucide-react";
+import { buildBreadcrumb } from "@/lib/categories";
+import { AdminShell } from "@/components/admin/AdminShell";
 
 interface CategoryRow {
   id: string;
@@ -24,39 +34,104 @@ interface CategoryRequest {
   parentCategory?: { name: string } | null;
 }
 
+function hierarchicalOptions(categories: CategoryRow[], parentId: string | null, depth = 0): { id: string; label: string }[] {
+  const rows: { id: string; label: string }[] = [];
+  for (const c of categories.filter((x) => x.parentId === parentId)) {
+    const prefix = depth > 0 ? `${"—".repeat(depth)} ` : "";
+    rows.push({ id: c.id, label: `${prefix}${c.name}` });
+    rows.push(...hierarchicalOptions(categories, c.id, depth + 1));
+  }
+  return rows;
+}
+
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [requests, setRequests] = useState<CategoryRequest[]>([]);
   const [form, setForm] = useState({ name: "", parentId: "", keywords: "" });
   const [msg, setMsg] = useState("");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [addingUnder, setAddingUnder] = useState<string | null>(null);
+  const [inlineName, setInlineName] = useState("");
+  const [inlineKeywords, setInlineKeywords] = useState("");
+  const [syncing, setSyncing] = useState(false);
 
-  const load = () => {
-    fetch("/api/admin/categories").then((r) => r.json()).then((d) => setCategories(d.categories || []));
-    fetch("/api/admin/category-requests").then((r) => r.json()).then((d) => setRequests(d.requests || []));
-  };
+  const categoryMap = useMemo(
+    () => new Map(categories.map((c) => [c.id, { id: c.id, name: c.name, parentId: c.parentId }])),
+    [categories]
+  );
 
-  useEffect(() => { load(); }, []);
+  const stats = useMemo(() => {
+    const roots = categories.filter((c) => !c.parentId).length;
+    const leaves = categories.filter((c) => c._count.children === 0).length;
+    const withProducts = categories.filter((c) => c._count.products > 0).length;
+    return { total: categories.length, roots, leaves, withProducts };
+  }, [categories]);
 
-  const addCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const parentOptions = useMemo(() => hierarchicalOptions(categories, null), [categories]);
+
+  const load = useCallback(() => {
+    fetch("/api/admin/categories")
+      .then((r) => r.json())
+      .then((d) => {
+        const cats: CategoryRow[] = d.categories || [];
+        setCategories(cats);
+        setExpanded((prev) => {
+          const next = new Set(prev);
+          cats.filter((c) => !c.parentId).forEach((c) => next.add(c.id));
+          return next;
+        });
+      });
+    fetch("/api/admin/category-requests")
+      .then((r) => r.json())
+      .then((d) => setRequests(d.requests || []));
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const createCategory = async (name: string, parentId: string | null, keywords?: string) => {
     const res = await fetch("/api/admin/categories", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: form.name,
-        parentId: form.parentId || null,
-        keywords: form.keywords || undefined,
-      }),
+      body: JSON.stringify({ name, parentId, keywords: keywords || undefined }),
     });
     const data = await res.json();
     if (res.ok) {
+      setMsg(`Added: ${buildBreadcrumb(categoryMap, data.category.id).join(" → ") || data.category.name}`);
+      if (parentId) setExpanded((prev) => new Set(prev).add(parentId));
       setForm({ name: "", parentId: "", keywords: "" });
-      setMsg(`Added: ${data.category.name}`);
+      setAddingUnder(null);
+      setInlineName("");
+      setInlineKeywords("");
       load();
     } else {
       setMsg(data.error);
     }
   };
+
+  const addCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await createCategory(form.name, form.parentId || null, form.keywords);
+  };
+
+  const addInlineSubcategory = async (e: React.FormEvent, parentId: string) => {
+    e.preventDefault();
+    if (!inlineName.trim()) return;
+    await createCategory(inlineName.trim(), parentId, inlineKeywords);
+  };
+
+  const toggleExpand = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const expandAll = () => setExpanded(new Set(categories.map((c) => c.id)));
+  const collapseAll = () => setExpanded(new Set());
 
   const toggleActive = async (id: string, isActive: boolean) => {
     await fetch(`/api/admin/categories/${id}`, {
@@ -67,8 +142,8 @@ export default function AdminCategoriesPage() {
     load();
   };
 
-  const deleteCat = async (id: string) => {
-    if (!confirm("Delete this category?")) return;
+  const deleteCat = async (id: string, name: string) => {
+    if (!confirm(`Delete "${name}"? Only empty categories (no children, no products) can be deleted.`)) return;
     const res = await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
     const data = await res.json();
     setMsg(res.ok ? "Deleted" : data.error);
@@ -84,47 +159,200 @@ export default function AdminCategoriesPage() {
     load();
   };
 
+  const syncFromSeed = async () => {
+    if (!confirm("Sync all categories from seed file? Existing categories will be updated (not deleted).")) return;
+    setSyncing(true);
+    const res = await fetch("/api/admin/categories/sync-seed", { method: "POST" });
+    const data = await res.json();
+    setMsg(res.ok ? data.message : data.error);
+    setSyncing(false);
+    if (res.ok) load();
+  };
+
   const pending = requests.filter((r) => r.status === "PENDING");
   const roots = categories.filter((c) => !c.parentId);
 
   function renderTree(parentId: string | null, depth = 0): React.ReactNode {
     return categories
       .filter((c) => c.parentId === parentId)
-      .map((c) => (
-        <div key={c.id}>
-          <div className="flex items-center gap-2 py-2 border-b border-gray-100" style={{ paddingLeft: depth * 20 }}>
-            {c._count.children > 0 && <ChevronRight size={14} className="text-gray-400" />}
-            <span className={`text-sm flex-1 ${!c.isActive ? "text-gray-400 line-through" : "font-medium"}`}>
-              {c.name}
-            </span>
-            <span className="text-xs text-gray-400">{c._count.products} products</span>
-            <button onClick={() => toggleActive(c.id, c.isActive)} className="text-xs text-blue-600">
-              {c.isActive ? "Disable" : "Enable"}
-            </button>
-            <button onClick={() => deleteCat(c.id)} className="text-red-500 p-1"><Trash2 size={14} /></button>
+      .map((c) => {
+        const hasChildren = c._count.children > 0;
+        const isExpanded = expanded.has(c.id);
+        const path = buildBreadcrumb(categoryMap, c.id);
+        const isLeaf = c._count.children === 0;
+
+        return (
+          <div key={c.id}>
+            <div
+              className={`group flex flex-wrap items-center gap-2 py-2 px-2 rounded-lg hover:bg-gray-50 border-b border-gray-100 ${
+                !c.isActive ? "opacity-60" : ""
+              }`}
+              style={{ paddingLeft: depth * 24 + 8 }}
+            >
+              <button
+                type="button"
+                onClick={() => hasChildren && toggleExpand(c.id)}
+                className="w-5 h-5 flex items-center justify-center text-gray-400 shrink-0"
+                aria-label={isExpanded ? "Collapse" : "Expand"}
+              >
+                {hasChildren ? (
+                  isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />
+                ) : (
+                  <span className="w-3 h-3 rounded-full bg-gray-200 inline-block" />
+                )}
+              </button>
+
+              {hasChildren ? (
+                isExpanded ? (
+                  <FolderOpen size={16} className="text-amber-500 shrink-0" />
+                ) : (
+                  <Folder size={16} className="text-amber-500 shrink-0" />
+                )
+              ) : (
+                <Tag size={14} className="text-green-600 shrink-0" />
+              )}
+
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`text-sm ${!c.isActive ? "line-through text-gray-400" : "font-medium"}`}>
+                    {c.name}
+                  </span>
+                  {isLeaf && (
+                    <span className="text-[10px] bg-green-50 text-green-700 border border-green-200 px-1.5 py-0.5 rounded">
+                      leaf
+                    </span>
+                  )}
+                  {hasChildren && (
+                    <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded">
+                      {c._count.children} sub
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted truncate" title={path.join(" → ")}>
+                  {path.join(" → ")}
+                </p>
+              </div>
+
+              <span className="text-xs text-gray-400 whitespace-nowrap">{c._count.products} products</span>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setAddingUnder(c.id);
+                  setInlineName("");
+                  setInlineKeywords("");
+                  setExpanded((prev) => new Set(prev).add(c.id));
+                }}
+                className="text-xs text-primary font-semibold flex items-center gap-0.5 opacity-70 group-hover:opacity-100 hover:underline"
+                title={`Add subcategory under ${c.name}`}
+              >
+                <Plus size={12} /> Sub
+              </button>
+
+              <button
+                type="button"
+                onClick={() => toggleActive(c.id, c.isActive)}
+                className="text-xs text-blue-600 hover:underline"
+              >
+                {c.isActive ? "Disable" : "Enable"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => deleteCat(c.id, c.name)}
+                className="text-red-500 p-1 hover:bg-red-50 rounded"
+                title="Delete"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+
+            {addingUnder === c.id && (
+              <form
+                onSubmit={(e) => addInlineSubcategory(e, c.id)}
+                className="flex flex-wrap items-center gap-2 py-2 px-3 mx-2 mb-1 bg-primary/5 border border-primary/20 rounded-lg"
+                style={{ marginLeft: depth * 24 + 32 }}
+              >
+                <span className="text-xs text-muted whitespace-nowrap">
+                  New under <strong>{c.name}</strong>:
+                </span>
+                <input
+                  value={inlineName}
+                  onChange={(e) => setInlineName(e.target.value)}
+                  placeholder="Subcategory name *"
+                  required
+                  autoFocus
+                  className="flex-1 min-w-[140px] px-2 py-1.5 border rounded text-sm"
+                />
+                <input
+                  value={inlineKeywords}
+                  onChange={(e) => setInlineKeywords(e.target.value)}
+                  placeholder="Keywords (optional)"
+                  className="flex-1 min-w-[140px] px-2 py-1.5 border rounded text-sm"
+                />
+                <button type="submit" className="bg-primary text-white px-3 py-1.5 rounded text-xs font-semibold">
+                  Add
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAddingUnder(null)}
+                  className="p-1 text-muted hover:text-foreground"
+                >
+                  <X size={14} />
+                </button>
+              </form>
+            )}
+
+            {hasChildren && isExpanded && renderTree(c.id, depth + 1)}
           </div>
-          {renderTree(c.id, depth + 1)}
-        </div>
-      ));
+        );
+      });
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <Link href="/admin" className="text-sm text-primary hover:underline">← Admin</Link>
-          <h1 className="text-2xl font-bold mt-1 flex items-center gap-2">
-            <FolderTree size={24} /> Category Management
-          </h1>
-          <p className="text-sm text-muted">{categories.length} categories · Unlimited nesting supported</p>
-        </div>
+    <AdminShell
+      title="Manage Categories"
+      description="Unlimited nesting — products attach to leaf categories only."
+    >
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted">
+          Sellers search by product name. Admin: sync seed file or approve seller requests.
+        </p>
+        <button
+          type="button"
+          onClick={syncFromSeed}
+          disabled={syncing}
+          className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-dark disabled:opacity-50"
+        >
+          {syncing ? "Syncing…" : "Sync Categories from Seed"}
+        </button>
       </div>
 
-      {msg && <div className="bg-green-50 text-green-800 text-sm p-3 rounded-lg">{msg}</div>}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "Total categories", value: stats.total },
+          { label: "Root categories", value: stats.roots },
+          { label: "Leaf (product) nodes", value: stats.leaves },
+          { label: "With products", value: stats.withProducts },
+        ].map((s) => (
+          <div key={s.label} className="bg-card border border-border rounded-lg p-3 text-center">
+            <p className="text-xl font-bold text-primary">{s.value}</p>
+            <p className="text-xs text-muted">{s.label}</p>
+          </div>
+        ))}
+      </div>
 
-      {/* Add category */}
+      {msg && (
+        <div className={`text-sm p-3 rounded-lg ${msg.startsWith("Added") || msg === "Deleted" ? "bg-green-50 text-green-800" : "bg-red-50 text-red-700"}`}>
+          {msg}
+        </div>
+      )}
+
       <div className="bg-card rounded-xl border border-border p-5">
-        <h2 className="font-semibold mb-4 flex items-center gap-2"><Plus size={18} /> Add New Category</h2>
+        <h2 className="font-semibold mb-4 flex items-center gap-2">
+          <Plus size={18} /> Add Category (any level)
+        </h2>
         <form onSubmit={addCategory} className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <input
             value={form.name}
@@ -139,8 +367,10 @@ export default function AdminCategoriesPage() {
             className="px-3 py-2 border rounded-lg text-sm"
           >
             <option value="">Root (top-level)</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+            {parentOptions.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label}
+              </option>
             ))}
           </select>
           <input
@@ -154,11 +384,10 @@ export default function AdminCategoriesPage() {
           </button>
         </form>
         <p className="text-xs text-muted mt-2">
-          Example: Parent = Electronics → Name = Tablets → Keywords = ipad, tab, slate
+          Or use <strong>+ Sub</strong> on any node in the tree below to add a child directly.
         </p>
       </div>
 
-      {/* Seller requests */}
       {pending.length > 0 && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5">
           <h2 className="font-semibold mb-3">Seller Category Requests ({pending.length})</h2>
@@ -173,8 +402,18 @@ export default function AdminCategoriesPage() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => approveRequest(r.id, "approve")} className="bg-green-600 text-white px-3 py-1 rounded text-xs font-semibold">Approve</button>
-                  <button onClick={() => approveRequest(r.id, "reject")} className="bg-red-500 text-white px-3 py-1 rounded text-xs">Reject</button>
+                  <button
+                    onClick={() => approveRequest(r.id, "approve")}
+                    className="bg-green-600 text-white px-3 py-1 rounded text-xs font-semibold"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => approveRequest(r.id, "reject")}
+                    className="bg-red-500 text-white px-3 py-1 rounded text-xs"
+                  >
+                    Reject
+                  </button>
                 </div>
               </div>
             ))}
@@ -182,13 +421,32 @@ export default function AdminCategoriesPage() {
         </div>
       )}
 
-      {/* Tree view */}
       <div className="bg-card rounded-xl border border-border p-5">
-        <h2 className="font-semibold mb-4">Category Tree ({roots.length} root categories)</h2>
-        <div className="max-h-[500px] overflow-y-auto">
-          {renderTree(null)}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 className="font-semibold">Full Category Tree ({roots.length} roots)</h2>
+          <div className="flex gap-2 text-xs">
+            <button type="button" onClick={expandAll} className="text-primary hover:underline">
+              Expand all
+            </button>
+            <span className="text-muted">·</span>
+            <button type="button" onClick={collapseAll} className="text-primary hover:underline">
+              Collapse all
+            </button>
+          </div>
         </div>
+        <div className="max-h-[600px] overflow-y-auto border border-border rounded-lg p-2">
+          {categories.length === 0 ? (
+            <p className="text-sm text-muted p-4 text-center">No categories yet. Add a root category above.</p>
+          ) : (
+            renderTree(null)
+          )}
+        </div>
+        <p className="text-xs text-muted mt-3 flex flex-wrap gap-x-4 gap-y-1">
+          <span>📁 = has subcategories</span>
+          <span>🏷️ green tag = leaf (sellers list products here)</span>
+          <span>Path shown under each name</span>
+        </p>
       </div>
-    </div>
+    </AdminShell>
   );
 }

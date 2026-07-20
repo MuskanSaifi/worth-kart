@@ -1,10 +1,11 @@
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../app/generated/prisma"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -18,6 +19,7 @@ enum OrderStatus {
   CONFIRMED
   PACKED
   SHIPPED
+  OUT_FOR_DELIVERY
   DELIVERED
   CANCELLED
   RETURNED
@@ -25,6 +27,7 @@ enum OrderStatus {
 
 enum PaymentMethod {
   COD
+  ONLINE
   UPI
   CARD
   WALLET
@@ -46,7 +49,7 @@ enum SellerStatus {
 }
 
 model User {
-  id            String   @id @default(cuid())
+  id            String   @id @default(cuid()) @map("_id")
   name          String?
   email         String   @unique
   phone         String?  @unique
@@ -55,6 +58,7 @@ model User {
   emailVerified Boolean  @default(false)
   phoneVerified Boolean  @default(false)
   image         String?
+  imagePublicId String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -63,14 +67,16 @@ model User {
   cart          Cart?
   orders        Order[]
   reviews       Review[]
-  wishlist      WishlistItem[]
-  otps          Otp[]
+  wishlist           WishlistItem[]
+  otps               Otp[]
+  blogs              Blog[]
+  pushSubscriptions  PushSubscription[]
 }
 
 model SellerProfile {
-  id            String       @id @default(cuid())
+  id            String       @id @default(cuid()) @map("_id")
   userId        String       @unique
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User         @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   businessName  String
   businessType  String?
   gstNumber     String?
@@ -85,10 +91,15 @@ model SellerProfile {
   panFailedAttempts Int      @default(0)
   bankAccount   String?
   bankIfsc      String?
+  bankVerified  Boolean      @default(false)
+  bankAccountHolderName String?
+  bankName      String?
   pickupAddress String?
   city          String?
   state         String?
   pincode       String?
+  profileImage  String?
+  profileImagePublicId String?
   status        SellerStatus @default(PENDING)
   rating        Float        @default(0)
   totalSales    Int          @default(0)
@@ -110,9 +121,9 @@ enum ActivationRequestStatus {
 }
 
 model SellerActivationRequest {
-  id        String                  @id @default(cuid())
+  id        String                  @id @default(cuid()) @map("_id")
   sellerId  String
-  seller    SellerProfile           @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  seller    SellerProfile           @relation(fields: [sellerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   message   String
   status    ActivationRequestStatus @default(PENDING)
   adminNote String?
@@ -129,14 +140,15 @@ enum QcStatus {
 }
 
 model Category {
-  id        String     @id @default(cuid())
+  id        String     @id @default(cuid()) @map("_id")
   name      String
   slug      String     @unique
   icon      String?
   image     String?
+  imagePublicId String?
   keywords  String?
   parentId  String?
-  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   children  Category[] @relation("CategoryTree")
   products  Product[]
   sortOrder Int        @default(0)
@@ -153,12 +165,12 @@ enum CategoryRequestStatus {
 }
 
 model CategoryRequest {
-  id               String                @id @default(cuid())
+  id               String                @id @default(cuid()) @map("_id")
   sellerId         String
-  seller           SellerProfile         @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  seller           SellerProfile         @relation(fields: [sellerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   name             String
   parentCategoryId String?
-  parentCategory   Category?             @relation(fields: [parentCategoryId], references: [id])
+  parentCategory   Category?             @relation(fields: [parentCategoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   productExample   String?
   status           CategoryRequestStatus @default(PENDING)
   adminNote        String?
@@ -167,7 +179,7 @@ model CategoryRequest {
 }
 
 model Product {
-  id          String         @id @default(cuid())
+  id          String         @id @default(cuid()) @map("_id")
   name        String
   slug        String         @unique
   description String
@@ -179,9 +191,9 @@ model Product {
   brand       String?
   images      ProductImage[]
   categoryId  String
-  category    Category       @relation(fields: [categoryId], references: [id])
+  category    Category       @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   sellerId    String
-  seller      SellerProfile  @relation(fields: [sellerId], references: [id])
+  seller      SellerProfile  @relation(fields: [sellerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   rating      Float          @default(0)
   reviewCount Int            @default(0)
   isActive    Boolean        @default(true)
@@ -201,37 +213,38 @@ model Product {
 }
 
 model ProductImage {
-  id        String  @id @default(cuid())
+  id        String  @id @default(cuid()) @map("_id")
   url       String
+  publicId  String?
   alt       String?
   isPrimary Boolean @default(false)
   productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model Cart {
-  id        String     @id @default(cuid())
+  id        String     @id @default(cuid()) @map("_id")
   userId    String     @unique
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   items     CartItem[]
   updatedAt DateTime   @updatedAt
 }
 
 model CartItem {
-  id        String  @id @default(cuid())
+  id        String  @id @default(cuid()) @map("_id")
   cartId    String
-  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   productId String
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   quantity  Int     @default(1)
 
   @@unique([cartId, productId])
 }
 
 model Address {
-  id        String  @id @default(cuid())
+  id        String  @id @default(cuid()) @map("_id")
   userId    String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   name      String
   phone     String
   line1     String
@@ -244,43 +257,82 @@ model Address {
 }
 
 model Order {
-  id            String        @id @default(cuid())
-  orderNumber   String        @unique
-  userId        String
-  user          User          @relation(fields: [userId], references: [id])
-  addressId     String
-  address       Address       @relation(fields: [addressId], references: [id])
-  status        OrderStatus   @default(PENDING)
-  paymentMethod PaymentMethod @default(COD)
-  paymentStatus PaymentStatus @default(PENDING)
-  subtotal      Float
-  discount      Float         @default(0)
-  shipping      Float         @default(0)
-  total         Float
-  items         OrderItem[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id                   String        @id @default(cuid()) @map("_id")
+  orderNumber          String        @unique
+  userId               String
+  user                 User          @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  addressId            String
+  address              Address       @relation(fields: [addressId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  status               OrderStatus   @default(PENDING)
+  paymentMethod        PaymentMethod @default(COD)
+  paymentStatus        PaymentStatus @default(PENDING)
+  gatewayPaymentId     String?
+  subtotal             Float
+  discount             Float         @default(0)
+  shipping             Float         @default(0)
+  total                Float
+  estimatedDeliveryAt  DateTime?
+  deliveredAt          DateTime?
+  cancelledAt          DateTime?
+  cancelReason         String?
+  deliveryOtpHash      String?
+  deliveryOtpExpiresAt DateTime?
+  items                OrderItem[]
+  events               OrderEvent[]
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+}
+
+model OrderEvent {
+  id        String       @id @default(cuid()) @map("_id")
+  orderId   String
+  order     Order        @relation(fields: [orderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  status    OrderStatus?
+  title     String
+  message   String?
+  source    String
+  createdAt DateTime     @default(now())
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid()) @map("_id")
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  endpoint  String
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, endpoint])
 }
 
 model OrderItem {
-  id        String  @id @default(cuid())
+  id        String  @id @default(cuid()) @map("_id")
   orderId   String
-  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   productId String
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   quantity  Int
   price     Float
   sellerId  String
   labelDownloaded Boolean @default(false)
+  awbCode               String?
+  courierName           String?
+  shiprocketOrderId     String?
+  shiprocketShipmentId  String?
+  trackingUrl           String?
+  labelUrl              String?
+  shippedAt             DateTime?
   returnRequests ReturnRequest[]
 }
 
 model Review {
-  id        String   @id @default(cuid())
+  id        String   @id @default(cuid()) @map("_id")
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   rating    Int
   comment   String?
   createdAt DateTime @default(now())
@@ -289,20 +341,21 @@ model Review {
 }
 
 model WishlistItem {
-  id        String  @id @default(cuid())
+  id        String  @id @default(cuid()) @map("_id")
   userId    String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([userId, productId])
 }
 
 model Banner {
-  id        String   @id @default(cuid())
+  id        String   @id @default(cuid()) @map("_id")
   title     String
   subtitle  String?
   image     String
+  imagePublicId String?
   link      String?
   bgColor   String?
   isActive  Boolean  @default(true)
@@ -310,10 +363,29 @@ model Banner {
   createdAt DateTime @default(now())
 }
 
+model Blog {
+  id              String   @id @default(cuid()) @map("_id")
+  title           String
+  slug            String   @unique
+  excerpt         String?
+  contentHtml     String
+  heroImage       String?
+  heroImagePublicId String?
+  tags            String?
+  seoTitle        String?
+  seoDescription  String?
+  isPublished     Boolean  @default(true)
+  publishedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  authorId        String
+  author          User     @relation(fields: [authorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
 model Otp {
-  id        String   @id @default(cuid())
+  id        String   @id @default(cuid()) @map("_id")
   userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   target    String
   type      String
   code      String
@@ -323,7 +395,7 @@ model Otp {
 }
 
 model SellerAnnouncement {
-  id          String   @id @default(cuid())
+  id          String   @id @default(cuid()) @map("_id")
   title       String
   description String?
   link        String?
@@ -332,9 +404,9 @@ model SellerAnnouncement {
 }
 
 model SellerNotice {
-  id        String         @id @default(cuid())
+  id        String         @id @default(cuid()) @map("_id")
   sellerId  String?
-  seller    SellerProfile? @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  seller    SellerProfile? @relation(fields: [sellerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   title     String
   message   String
   isRead    Boolean        @default(false)
@@ -349,11 +421,11 @@ enum ReturnStatus {
 }
 
 model ReturnRequest {
-  id          String       @id @default(cuid())
+  id          String       @id @default(cuid()) @map("_id")
   orderItemId String
-  orderItem   OrderItem    @relation(fields: [orderItemId], references: [id])
+  orderItem   OrderItem    @relation(fields: [orderItemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   sellerId    String
-  seller      SellerProfile @relation(fields: [sellerId], references: [id])
+  seller      SellerProfile @relation(fields: [sellerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   reason      String
   status      ReturnStatus @default(PENDING)
   createdAt   DateTime     @default(now())
@@ -367,9 +439,9 @@ enum ClaimStatus {
 }
 
 model SellerClaim {
-  id          String       @id @default(cuid())
+  id          String       @id @default(cuid()) @map("_id")
   sellerId    String
-  seller      SellerProfile @relation(fields: [sellerId], references: [id])
+  seller      SellerProfile @relation(fields: [sellerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   title       String
   description String
   status      ClaimStatus  @default(OPEN)

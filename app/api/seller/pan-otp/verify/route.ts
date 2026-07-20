@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSellerProfile } from "@/lib/seller";
+import { getSellerProfile, tryAutoApproveSeller } from "@/lib/seller";
 import { validatePan } from "@/lib/pan";
 import { verifyOtpVia2Factor, isTwoFactorConfigured } from "@/lib/two-factor";
 import { z } from "zod";
@@ -60,9 +60,14 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    const autoApproved = await tryAutoApproveSeller(seller.id);
+
     return NextResponse.json({
       verified: true,
-      message: "PAN verified successfully!",
+      autoApproved,
+      message: autoApproved
+        ? "PAN verified! Your seller account is now approved."
+        : "PAN verified successfully!",
     });
   } catch {
     return NextResponse.json({ error: "PAN verification failed" }, { status: 500 });

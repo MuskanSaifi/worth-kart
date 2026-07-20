@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { otpVerifySchema } from "@/lib/validations";
 import { verifyOtpVia2Factor, isTwoFactorConfigured } from "@/lib/two-factor";
+import { isTwoFactorSessionCode } from "@/lib/otp-send";
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     let valid = false;
 
-    if (isTwoFactorConfigured() && !otp.code.startsWith("dev")) {
+    if (isTwoFactorConfigured() && isTwoFactorSessionCode(otp.code)) {
       valid = await verifyOtpVia2Factor(otp.code, code);
     } else {
       valid = otp.code === code;

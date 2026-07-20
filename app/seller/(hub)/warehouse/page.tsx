@@ -2,6 +2,8 @@ import { getSellerProfile } from "@/lib/seller";
 import { SellerPageHeader, SellerCard } from "@/components/seller/SellerPageHeader";
 import { GstOtpVerifyPanel } from "@/components/seller/GstOtpVerifyPanel";
 import { PanVerifyPanel } from "@/components/seller/PanVerifyPanel";
+import { SellerProfileImageUpload } from "@/components/seller/SellerProfileImageUpload";
+import { BankDetailsForm } from "@/components/seller/BankDetailsForm";
 import { MapPin, Building2, CreditCard } from "lucide-react";
 
 export default async function SellerWarehousePage() {
@@ -74,6 +76,8 @@ export default async function SellerWarehousePage() {
                 gstNumber={seller.gstNumber}
                 gstRegisteredMobile={seller.gstRegisteredMobile}
               />
+
+              <SellerProfileImageUpload initialImage={seller.profileImage} />
             </div>
           </div>
         </SellerCard>
@@ -100,13 +104,14 @@ export default async function SellerWarehousePage() {
         <SellerCard className="md:col-span-2">
           <div className="flex items-start gap-3">
             <div className="p-2 bg-green-100 rounded-lg"><CreditCard size={20} className="text-green-600" /></div>
-            <div>
-              <p className="font-semibold text-gray-800">Bank Account</p>
-              <div className="mt-3 text-sm">
-                <p><span className="text-gray-400">Account:</span> {seller.bankAccount ? `****${seller.bankAccount.slice(-4)}` : "Not set"}</p>
-                <p className="mt-1"><span className="text-gray-400">IFSC:</span> {seller.bankIfsc || "Not set"}</p>
-              </div>
-            </div>
+            <BankDetailsForm
+              initialAccount={seller.bankAccount}
+              initialIfsc={seller.bankIfsc}
+              initialVerified={seller.bankVerified}
+              initialHolderName={seller.bankAccountHolderName}
+              initialBankName={seller.bankName}
+              businessName={seller.gstLegalName || seller.businessName}
+            />
           </div>
         </SellerCard>
       </div>

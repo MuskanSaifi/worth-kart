@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { categoryUpdateSchema, makeCategorySlug } from "@/lib/category-admin";
+import { deleteFromCloudinary } from "@/lib/cloudinary";
 
 export async function PATCH(
   req: NextRequest,
@@ -58,6 +59,10 @@ export async function DELETE(
     }
     if (cat._count.products > 0) {
       return NextResponse.json({ error: "Category has products — deactivate instead" }, { status: 400 });
+    }
+
+    if (cat.imagePublicId) {
+      await deleteFromCloudinary(cat.imagePublicId);
     }
 
     await prisma.category.delete({ where: { id } });

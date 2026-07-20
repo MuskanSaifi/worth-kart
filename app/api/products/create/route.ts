@@ -59,11 +59,13 @@ export async function POST(req: NextRequest) {
         categoryId: data.categoryId,
         sellerId: seller.id,
         brand: data.brand,
+        tags: data.tags || null,
         catalogFileId: `WK${Date.now().toString(36).toUpperCase()}`,
         qcStatus: "QC_IN_PROGRESS",
         images: {
-          create: data.images.map((url, i) => ({
-            url,
+          create: data.images.map((img, i) => ({
+            url: img.url,
+            publicId: img.publicId,
             isPrimary: i === 0,
             alt: data.name,
           })),

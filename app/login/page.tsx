@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { OtpModal } from "@/components/otp/OtpModal";
 
 function LoginForm() {
   const router = useRouter();
@@ -15,26 +16,51 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [otpModal, setOtpModal] = useState<{
+    type: "email" | "phone";
+    target: string;
+  } | null>(null);
+  const [devOtp, setDevOtp] = useState("");
+
+  const completeSignIn = async () => {
+    setLoading(true);
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+    setLoading(false);
+
+    if (result?.error) {
+      setError("OTP expired or login failed. Please try again.");
+      setOtpModal(null);
+      return;
+    }
+
+    router.push(callbackUrl);
+    router.refresh();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
+    const res = await fetch("/api/auth/login-otp/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
     });
-
+    const data = await res.json();
     setLoading(false);
 
-    if (result?.error) {
-      setError("Invalid email or password");
-    } else {
-      router.push(callbackUrl);
-      router.refresh();
+    if (!res.ok) {
+      setError(data.error || "Invalid email or password");
+      return;
     }
+
+    setDevOtp(data.devOtp || "");
+    setOtpModal({ type: data.type, target: data.target });
   };
 
   return (
@@ -43,7 +69,9 @@ function LoginForm() {
         <div className="bg-card rounded-xl shadow-lg border border-border p-8">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-foreground">Welcome Back</h1>
-            <p className="text-sm text-muted mt-1">Login to your WorthKart account</p>
+            <p className="text-sm text-muted mt-1">
+              Login with password + real OTP (buyer, seller &amp; admin)
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -92,7 +120,13 @@ function LoginForm() {
               disabled={loading}
               className="w-full bg-primary text-white py-3 rounded-lg font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loading ? <><Loader2 size={18} className="animate-spin" /> Logging in...</> : "Login"}
+              {loading ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" /> Sending OTP...
+                </>
+              ) : (
+                "Continue with OTP"
+              )}
             </button>
           </form>
 
@@ -108,15 +142,19 @@ function LoginForm() {
               Want to sell? Register as Seller →
             </Link>
           </div>
-
-          <div className="mt-6 p-3 bg-purple-50 rounded-lg text-xs text-muted">
-            <p className="font-medium text-primary mb-1">Demo Accounts:</p>
-            <p>Buyer: buyer@worthkart.com / Buyer@123</p>
-            <p>Seller: seller@worthkart.com / Seller@123</p>
-            <p>Admin: admin@worthkart.com / Admin@123</p>
-          </div>
         </div>
       </div>
+
+      {otpModal && (
+        <OtpModal
+          type={otpModal.type}
+          target={otpModal.target}
+          devOtp={devOtp}
+          onClose={() => setOtpModal(null)}
+          onVerified={completeSignIn}
+          onError={setError}
+        />
+      )}
     </div>
   );
 }

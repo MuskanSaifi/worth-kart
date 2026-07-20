@@ -1,70 +1,70 @@
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/auth";
+import { AdminShell } from "@/components/admin/AdminShell";
 import Link from "next/link";
-import { AdminActivationPanel } from "@/components/admin/AdminActivationPanel";
+import { Users, Package, ShoppingBag, FileText } from "lucide-react";
+import { syncPendingAutoApprovals } from "@/lib/seller";
 
-export default async function AdminPage() {
-  await requireRole("ADMIN");
+export default async function AdminDashboardPage() {
+  await syncPendingAutoApprovals();
 
-  const [users, sellers, products, orders] = await Promise.all([
+  const [users, sellers, products, orders, blogs] = await Promise.all([
     prisma.user.count(),
     prisma.sellerProfile.count(),
     prisma.product.count(),
     prisma.order.count(),
+    prisma.blog.count(),
   ]);
 
-  const pendingSellers = await prisma.sellerProfile.findMany({
-    where: { status: "PENDING" },
-    include: { user: { select: { email: true, phone: true } } },
-  });
+  const stats = [
+    { label: "Users", value: users, href: "#", icon: Users, color: "from-blue-500 to-cyan-500" },
+    { label: "Sellers", value: sellers, href: "/admin/sellers", icon: Users, color: "from-violet-500 to-purple-500" },
+    { label: "Products", value: products, href: "#", icon: Package, color: "from-emerald-500 to-green-500" },
+    { label: "Orders", value: orders, href: "/admin/orders", icon: ShoppingBag, color: "from-orange-500 to-amber-500" },
+    { label: "Blogs", value: blogs, href: "/admin/blogs", icon: FileText, color: "from-pink-500 to-rose-500" },
+  ];
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-      <h1 className="text-2xl font-bold">Admin Panel</h1>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: "Users", value: users },
-          { label: "Sellers", value: sellers },
-          { label: "Products", value: products },
-          { label: "Orders", value: orders },
-        ].map((s) => (
-          <div key={s.label} className="bg-card rounded-lg border border-border p-4 text-center">
-            <p className="text-2xl font-bold text-primary">{s.value}</p>
-            <p className="text-sm text-muted">{s.label}</p>
-          </div>
-        ))}
+    <AdminShell
+      title="Dashboard"
+      description="Overview of your marketplace activity and quick admin actions."
+    >
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        {stats.map((s) => {
+          const Icon = s.icon;
+          return (
+            <Link
+              key={s.label}
+              href={s.href}
+              className="group rounded-2xl border border-border bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${s.color} text-white flex items-center justify-center mb-3`}>
+                <Icon size={18} />
+              </div>
+              <p className="text-2xl font-bold text-primary">{s.value}</p>
+              <p className="text-sm text-muted">{s.label}</p>
+            </Link>
+          );
+        })}
       </div>
 
-      {pendingSellers.length > 0 && (
-        <div className="bg-card rounded-lg border border-border p-5">
-          <h2 className="font-semibold mb-4">Pending Seller Approvals</h2>
-          <div className="space-y-3">
-            {pendingSellers.map((s) => (
-              <div key={s.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                <div>
-                  <p className="font-medium">{s.businessName}</p>
-                  <p className="text-xs text-muted">{s.user.email} · {s.city}, {s.state}</p>
-                </div>
-                <form action={`/api/admin/sellers/${s.id}/approve`} method="POST">
-                  <button type="submit" className="bg-success text-white px-3 py-1.5 rounded text-sm font-semibold">
-                    Approve
-                  </button>
-                </form>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <AdminActivationPanel />
-
-      <p className="text-sm text-muted">
-        <Link href="/admin/categories" className="text-primary font-semibold hover:underline">
-          Manage Categories →
-        </Link>{" "}
-        Add unlimited categories for sellers. Sellers can also request new categories.
-      </p>
-    </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { title: "Manage Orders", desc: "Update statuses, track EDD and payment state", href: "/admin/orders" },
+          { title: "Manage Sellers", desc: "Approve sellers, view verification and products", href: "/admin/sellers" },
+          { title: "Manage Categories", desc: "Create unlimited category tree for products", href: "/admin/categories" },
+          { title: "Manage Blogs", desc: "Create SEO blogs with hero image and rich content", href: "/admin/blogs" },
+        ].map((card) => (
+          <Link
+            key={card.href}
+            href={card.href}
+            className="rounded-2xl border border-border bg-white p-5 shadow-sm hover:border-primary/30 hover:shadow-md transition-all"
+          >
+            <h3 className="font-semibold">{card.title}</h3>
+            <p className="text-sm text-muted mt-2">{card.desc}</p>
+            <span className="inline-block mt-4 text-sm font-semibold text-primary">Open →</span>
+          </Link>
+        ))}
+      </div>
+    </AdminShell>
   );
 }

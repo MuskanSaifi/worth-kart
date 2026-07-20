@@ -5,7 +5,7 @@
 
 export const OTP_DIGITS = 4;
 
-const DEFAULT_SENDER_EMAIL = "info@worthkart.in";
+const DEFAULT_SENDER_EMAIL = "kartworth@gmail.com";
 
 export function getTwoFactorSenderEmail(): string {
   return process.env.TWO_FACTOR_SENDER_EMAIL || DEFAULT_SENDER_EMAIL;

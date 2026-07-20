@@ -19,6 +19,8 @@ export interface ProductCardData {
   reviewCount: number;
   brand?: string | null;
   images: { url: string; alt?: string | null }[];
+  isFeatured?: boolean;
+  stock?: number;
 }
 
 export function ProductCard({ product }: { product: ProductCardData }) {
@@ -61,8 +63,13 @@ export function ProductCard({ product }: { product: ProductCardData }) {
 
   return (
     <div className="group bg-card rounded-lg border border-border hover:shadow-lg transition-all duration-300 overflow-hidden relative">
+      {product.isFeatured && (
+        <span className="absolute top-2 left-2 z-10 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+          Sponsored
+        </span>
+      )}
       {product.discount > 0 && (
-        <span className="absolute top-2 left-2 z-10 bg-pink-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+        <span className={`absolute ${product.isFeatured ? "top-7" : "top-2"} left-2 z-10 bg-pink-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded`}>
           {product.discount}% OFF
         </span>
       )}
@@ -109,10 +116,10 @@ export function ProductCard({ product }: { product: ProductCardData }) {
       <div className="px-3 pb-3">
         <button
           onClick={handleAddToCart}
-          disabled={adding}
+          disabled={adding || product.stock === 0}
           className="w-full py-2 text-xs font-semibold text-primary border border-primary rounded hover:bg-primary hover:text-white transition-colors disabled:opacity-50"
         >
-          {adding ? "Adding..." : "Add to Cart"}
+          {product.stock === 0 ? "Out of Stock" : adding ? "Adding..." : "Add to Cart"}
         </button>
       </div>
     </div>
