@@ -70,7 +70,7 @@ function LoginForm() {
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-foreground">Welcome Back</h1>
             <p className="text-sm text-muted mt-1">
-              Login with password + real OTP (buyer, seller &amp; admin)
+              Sign in with your email, password, and OTP verification
             </p>
           </div>
 

@@ -77,7 +77,7 @@ export default function RegisterPage() {
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold">Create Account</h1>
             <p className="text-sm text-muted mt-1">
-              Verify email &amp; mobile with real OTP (TWO_FACTOR_OTP_TEMPLATE)
+              Verify your email and mobile number to get started
             </p>
           </div>
 

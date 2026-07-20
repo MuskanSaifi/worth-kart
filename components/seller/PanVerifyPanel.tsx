@@ -118,7 +118,9 @@ export function PanVerifyPanel({
           ) : (
             <div className="mt-3 space-y-2">
               <p className="text-xs text-gray-600">OTP sent to <strong>{maskedPhone}</strong></p>
-              {devOtp && <p className="text-xs bg-blue-100 p-2 rounded">Dev OTP: <strong>{devOtp}</strong></p>}
+              {process.env.NODE_ENV === "development" && devOtp && (
+                <p className="text-xs bg-blue-100 p-2 rounded">Dev only: <strong>{devOtp}</strong></p>
+              )}
               <div className="flex gap-2">
                 <input
                   value={otp}

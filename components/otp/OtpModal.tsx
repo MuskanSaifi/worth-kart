@@ -39,18 +39,13 @@ export function OtpModal({ type, target, devOtp, onClose, onVerified, onError }:
         <h3 className="text-lg font-semibold mb-1">
           Verify {type === "email" ? "Email" : "Mobile"}
         </h3>
-        <p className="text-sm text-muted mb-1">
-          Enter 4-digit OTP sent to <strong>{target}</strong>
-        </p>
-        <p className="text-xs text-muted mb-4">
-          {type === "email"
-            ? "Real 4-digit OTP sent to your email (2Factor template)"
-            : "Real 4-digit OTP via SMS (TWO_FACTOR_OTP_TEMPLATE)"}
+        <p className="text-sm text-muted mb-4">
+          Enter the 4-digit code sent to <strong>{target}</strong>
         </p>
 
-        {devOtp && (
+        {process.env.NODE_ENV === "development" && devOtp && (
           <p className="text-xs bg-yellow-50 text-yellow-800 p-2 rounded mb-3">
-            Dev OTP only (2Factor API key missing): <strong>{devOtp}</strong>
+            Dev only: <strong>{devOtp}</strong>
           </p>
         )}
 

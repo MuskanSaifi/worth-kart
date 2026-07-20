@@ -117,8 +117,8 @@ export function GstOtpVerifyPanel({
                 OTP sent to <strong>{maskedPhone}</strong>
                 {legalName && <> · {legalName}</>}
               </p>
-              {devOtp && (
-                <p className="text-xs bg-blue-50 text-blue-800 p-2 rounded">Dev OTP: <strong>{devOtp}</strong></p>
+              {process.env.NODE_ENV === "development" && devOtp && (
+                <p className="text-xs bg-blue-50 text-blue-800 p-2 rounded">Dev only: <strong>{devOtp}</strong></p>
               )}
               <div className="flex gap-2">
                 <input

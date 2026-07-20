@@ -60,7 +60,7 @@ export async function sendAndStoreOtp(
       }
       return {
         success: false,
-        error: "SMS OTP not configured. Set TWO_FACTOR_API_KEY and TWO_FACTOR_OTP_TEMPLATE.",
+        error: "SMS OTP is temporarily unavailable. Please try again later.",
         status: 503,
       };
     }
@@ -120,7 +120,7 @@ export async function sendAndStoreOtp(
       success: false,
       error:
         smtp.error ||
-        "Failed to send Email OTP. Configure TWO_FACTOR_API_KEY + TWO_FACTOR_OTP_TEMPLATE or SMTP.",
+        "Unable to send email OTP. Please try again later.",
       status: 502,
     };
   }
