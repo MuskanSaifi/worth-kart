@@ -495,9 +495,12 @@ function parseGoogleResult(
   };
 }
 
-async function reverseWithNominatim(lat: number, lng: number): Promise<
-  GeocodePayload & { block?: string; sector?: string; road?: string; sectorFromRoad?: boolean }
-> | null {
+async function reverseWithNominatim(
+  lat: number,
+  lng: number
+): Promise<
+  (GeocodePayload & { block?: string; sector?: string; road?: string; sectorFromRoad?: boolean }) | null
+> {
   const url = new URL("https://nominatim.openstreetmap.org/reverse");
   url.searchParams.set("format", "jsonv2");
   url.searchParams.set("lat", String(lat));
