@@ -4,6 +4,7 @@ import { CategoryMegaMenu } from "./CategoryMegaMenu";
 import { HeaderSearchBar } from "./HeaderSearchBar";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import Image from "next/image";
 import { MapPin, Download, ChevronDown, HelpCircle, Package } from "lucide-react";
 
 export async function Header() {
@@ -52,12 +53,15 @@ export async function Header() {
       {/* Main header */}
       <div className="bg-primary">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
-          <Link href="/" className="flex-shrink-0">
-            <div className="flex items-center gap-1">
-              <span className="text-2xl font-black text-white tracking-tight">
-                Worth<span className="text-accent">Kart</span>
-              </span>
-            </div>
+          <Link href="/" className="flex-shrink-0" aria-label="WorthKart Home">
+            <Image
+              src="/logo.png"
+              alt="WorthKart"
+              width={160}
+              height={56}
+              priority
+              className="h-11 w-auto object-contain bg-white rounded-md px-1"
+            />
           </Link>
 
           <HeaderSearchBar />
