@@ -4,7 +4,7 @@ import { CategoryMegaMenu } from "./CategoryMegaMenu";
 import { HeaderSearchBar } from "./HeaderSearchBar";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { MapPin, Download, Store, ChevronDown, HelpCircle, Package } from "lucide-react";
+import { MapPin, Download, ChevronDown, HelpCircle, Package } from "lucide-react";
 
 export async function Header() {
   const session = await auth();
@@ -39,12 +39,6 @@ export async function Header() {
             <Link href="#" className="hover:text-accent transition-colors flex items-center gap-1">
               <Download size={12} /> Download App
             </Link>
-            <Link href="/seller/register" className="hover:text-accent transition-colors flex items-center gap-1">
-              <Store size={12} /> Become a Seller
-            </Link>
-            <button className="hover:text-accent transition-colors flex items-center gap-1">
-              More <ChevronDown size={12} />
-            </button>
             <Link href="#" className="hover:text-accent transition-colors flex items-center gap-1">
               <HelpCircle size={12} /> Help
             </Link>

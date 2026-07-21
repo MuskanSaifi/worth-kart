@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import crypto from "node:crypto";
 import { prisma } from "@/lib/prisma";
-import { registerSchema } from "@/lib/validations";
+import { buyerRegisterSchema } from "@/lib/validations";
 import { isOtpVerifiedRecently } from "@/lib/otp-check";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const parsed = registerSchema.safeParse(body);
+    const parsed = buyerRegisterSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { error: parsed.error.issues[0].message },
@@ -15,38 +16,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { name, email, phone, password } = parsed.data;
-
-    const [emailOk, phoneOk] = await Promise.all([
-      isOtpVerifiedRecently(email, "email"),
-      isOtpVerifiedRecently(phone, "phone"),
-    ]);
-    if (!emailOk) {
-      return NextResponse.json({ error: "Please verify your email OTP first" }, { status: 400 });
-    }
+    const { phone } = parsed.data;
+    const phoneOk = await isOtpVerifiedRecently(phone, "phone");
     if (!phoneOk) {
       return NextResponse.json({ error: "Please verify your mobile OTP first" }, { status: 400 });
     }
 
-    const existing = await prisma.user.findFirst({
-      where: { OR: [{ email }, { phone }] },
-    });
+    const existing = await prisma.user.findUnique({ where: { phone } });
     if (existing) {
       return NextResponse.json(
-        { error: "Email or phone already registered" },
+        { error: "Mobile number already registered. Please login." },
         { status: 409 }
       );
     }
 
-    const hashed = await bcrypt.hash(password, 12);
+    // User adds a real email later from My Account. These internal values keep
+    // the existing schema compatible and are never shown to the buyer.
+    const internalEmail = `buyer-${phone}@users.worthkart.in`;
+    const hashed = await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 12);
     const user = await prisma.user.create({
       data: {
-        name,
-        email,
+        email: internalEmail,
         phone,
         password: hashed,
         role: "BUYER",
-        emailVerified: true,
+        emailVerified: false,
         phoneVerified: true,
         cart: { create: {} },
       },
@@ -54,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      user: { id: user.id, email: user.email, name: user.name },
+      user: { id: user.id, phone: user.phone },
     });
   } catch {
     return NextResponse.json({ error: "Registration failed" }, { status: 500 });

@@ -5,11 +5,17 @@ export const authConfig = {
     signIn: "/login",
   },
   callbacks: {
-    jwt({ token, user }) {
+    jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id!;
         token.role = user.role;
         token.phone = user.phone;
+        token.name = user.name;
+        token.picture = user.image;
+      }
+      if (trigger === "update" && session) {
+        if (typeof session.name !== "undefined") token.name = session.name;
+        if (typeof session.image !== "undefined") token.picture = session.image;
       }
       return token;
     },
@@ -18,6 +24,9 @@ export const authConfig = {
         session.user.id = token.id as string;
         session.user.role = token.role as "BUYER" | "SELLER" | "ADMIN";
         session.user.phone = token.phone as string | null | undefined;
+        session.user.name = (token.name as string | null | undefined) ?? session.user.name;
+        session.user.image =
+          (token.picture as string | null | undefined) ?? session.user.image;
       }
       return session;
     },

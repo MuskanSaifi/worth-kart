@@ -1,39 +1,75 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { loginSchema } from "@/lib/validations";
+import { buyerLoginSchema, loginSchema } from "@/lib/validations";
 import { sendAndStoreOtp } from "@/lib/otp-send";
 
 /**
- * Step 1 of login: validate email/password, then send real 2Factor OTP
- * to phone (preferred) or email. Works for BUYER, SELLER, and ADMIN.
+ * Buyer: mobile number only. Seller/admin: email + password.
+ * Both flows finish with OTP verification before a session is created.
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const parsed = loginSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: parsed.error.issues[0].message },
-        { status: 400 }
-      );
-    }
+    const accountType =
+      body.accountType === "admin"
+        ? "admin"
+        : body.accountType === "seller"
+          ? "seller"
+          : "buyer";
+    let target: string;
+    let type: "phone" | "email";
 
-    const email = parsed.data.email.trim().toLowerCase();
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    if (accountType === "buyer") {
+      const parsed = buyerLoginSchema.safeParse(body);
+      if (!parsed.success) {
+        return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+      }
+      const user = await prisma.user.findUnique({ where: { phone: parsed.data.phone } });
+      if (!user || user.role !== "BUYER") {
+        return NextResponse.json(
+          { error: "Mobile number is not registered. Please create an account." },
+          { status: 404 }
+        );
+      }
+      target = parsed.data.phone;
+      type = "phone";
+    } else {
+      const parsed = loginSchema.safeParse(body);
+      if (!parsed.success) {
+        return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
+      }
+      const email = parsed.data.email.trim().toLowerCase();
+      const user = await prisma.user.findUnique({ where: { email } });
+      const allowedRole = accountType === "admin" ? "ADMIN" : "SELLER";
+      if (!user || user.role !== allowedRole) {
+        return NextResponse.json(
+          {
+            error:
+              accountType === "admin"
+                ? "Invalid admin email or password"
+                : "Invalid seller email or password",
+          },
+          { status: 401 }
+        );
+      }
+      const valid = await bcrypt.compare(parsed.data.password, user.password);
+      if (!valid) {
+        return NextResponse.json(
+          {
+            error:
+              accountType === "admin"
+                ? "Invalid admin email or password"
+                : "Invalid seller email or password",
+          },
+          { status: 401 }
+        );
+      }
+      const phone = user.phone?.replace(/\D/g, "").slice(-10);
+      const usePhone = Boolean(phone && /^[6-9]\d{9}$/.test(phone));
+      type = usePhone ? "phone" : "email";
+      target = usePhone ? phone! : user.email;
     }
-
-    const valid = await bcrypt.compare(parsed.data.password, user.password);
-    if (!valid) {
-      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
-    }
-
-    const phone = user.phone?.replace(/\D/g, "").slice(-10);
-    const preferPhone = phone && /^[6-9]\d{9}$/.test(phone);
-    const type = preferPhone ? "phone" : "email";
-    const target = preferPhone ? phone! : user.email;
 
     const result = await sendAndStoreOtp(target, type);
     if (!result.success) {

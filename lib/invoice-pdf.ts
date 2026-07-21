@@ -54,7 +54,9 @@ export async function buildOrderInvoicePdf(orderId: string, userId?: string) {
   if (order.address.line2) draw(order.address.line2);
   draw(`${order.address.city}, ${order.address.state} - ${order.address.pincode}`);
   draw(`Phone: ${order.address.phone}`);
-  if (order.user.email) draw(`Email: ${order.user.email}`);
+  if (order.user.email && !order.user.email.includes("@users.worthkart.in")) {
+    draw(`Email: ${order.user.email}`);
+  }
   y -= 12;
 
   draw("Items", { bold: true, size: 12 });

@@ -15,6 +15,16 @@ export const loginSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
+export const mobileSchema = z.object({
+  phone: z
+    .string()
+    .transform((value) => value.replace(/\D/g, "").slice(-10))
+    .pipe(z.string().regex(/^[6-9]\d{9}$/, "Enter valid 10-digit Indian mobile number")),
+});
+
+export const buyerLoginSchema = mobileSchema;
+export const buyerRegisterSchema = mobileSchema;
+
 export const registerSchema = z
   .object({
     name: z.string().min(2, "Name must be at least 2 characters"),
@@ -117,12 +127,6 @@ export const otpVerifySchema = z.object({
   type: z.enum(["email", "phone"]),
   code: z.string().regex(/^\d{4}$/, "OTP must be 4 digits"),
 });
-
-export const buyerRegisterSchema = registerSchema
-  .extend({
-    emailVerified: z.literal(true, { message: "Please verify email OTP" }),
-    phoneVerified: z.literal(true, { message: "Please verify mobile OTP" }),
-  });
 
 export const uploadedImageSchema = z.object({
   url: z.string().url(),

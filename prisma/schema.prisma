@@ -351,16 +351,21 @@ model WishlistItem {
 }
 
 model Banner {
-  id        String   @id @default(cuid()) @map("_id")
-  title     String
-  subtitle  String?
-  image     String
+  id            String          @id @default(cuid()) @map("_id")
+  title         String
+  subtitle      String?
+  image         String
   imagePublicId String?
-  link      String?
-  bgColor   String?
-  isActive  Boolean  @default(true)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
+  link          String?
+  bgColor       String?
+  ctaLabel      String?
+  /// HERO = top carousel, PROMO = mid offers grid, FOOTER = bottom strip
+  placement     String          @default("HERO")
+  /// STANDARD = large promo card, COMPACT = small tile (EMI/Exchange style)
+  variant       String          @default("STANDARD")
+  isActive      Boolean         @default(true)
+  sortOrder     Int             @default(0)
+  createdAt     DateTime        @default(now())
 }
 
 model Blog {

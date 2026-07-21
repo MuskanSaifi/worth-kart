@@ -1,73 +1,71 @@
 "use client";
 
 import { useState } from "react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, Loader2, Check } from "lucide-react";
+import { Loader2, Smartphone } from "lucide-react";
 import { OtpModal } from "@/components/otp/OtpModal";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    password: "",
-    confirmPassword: "",
-  });
-  const [emailVerified, setEmailVerified] = useState(false);
-  const [phoneVerified, setPhoneVerified] = useState(false);
-  const [otpModal, setOtpModal] = useState<{ type: "email" | "phone"; target: string } | null>(null);
+  const [phone, setPhone] = useState("");
+  const [otpOpen, setOtpOpen] = useState(false);
   const [devOtp, setDevOtp] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const sendOtp = async (type: "email" | "phone") => {
-    const target = type === "email" ? form.email : form.phone;
-    if (!target) {
-      setError(`Enter ${type} first`);
-      return;
-    }
+  const sendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError("");
+    setLoading(true);
     const res = await fetch("/api/otp/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ target, type }),
+      body: JSON.stringify({ target: phone, type: "phone" }),
     });
     const data = await res.json();
+    setLoading(false);
     if (!res.ok) {
-      setError(data.error);
+      setError(data.error || "Could not send OTP");
       return;
     }
     setDevOtp(data.devOtp || "");
-    setOtpModal({ type, target });
+    setOtpOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!emailVerified || !phoneVerified) {
-      setError("Please verify email and mobile OTP before registering");
-      return;
-    }
-    setError("");
+  const completeRegistration = async () => {
+    setOtpOpen(false);
     setLoading(true);
-
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ phone }),
     });
-
     const data = await res.json();
-    setLoading(false);
-
+    if (res.status === 409) {
+      setLoading(false);
+      setError("This mobile number is already registered. Please login.");
+      return;
+    }
     if (!res.ok) {
+      setLoading(false);
       setError(data.error || "Registration failed");
       return;
     }
 
-    router.push("/login?registered=true");
+    const result = await signIn("credentials", {
+      phone,
+      accountType: "buyer",
+      redirect: false,
+    });
+    setLoading(false);
+    if (result?.error) {
+      router.push("/login");
+      return;
+    }
+    router.push("/");
+    router.refresh();
   };
 
   return (
@@ -77,137 +75,60 @@ export default function RegisterPage() {
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold">Create Account</h1>
             <p className="text-sm text-muted mt-1">
-              Verify your email and mobile number to get started
+              Register instantly using your mobile number
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={sendOtp} className="space-y-5">
             {error && (
               <div className="bg-red-50 text-danger text-sm p-3 rounded-lg">{error}</div>
             )}
-
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Full Name</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                required
-                className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
-                placeholder="Your name"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Email</label>
-              <div className="flex border border-border rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-primary/30">
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => {
-                    setForm({ ...form, email: e.target.value });
-                    setEmailVerified(false);
-                  }}
-                  required
-                  className="flex-1 px-4 py-2.5 outline-none"
-                  placeholder="you@email.com"
-                />
-                <button
-                  type="button"
-                  onClick={() => sendOtp("email")}
-                  className={`px-4 text-sm font-semibold border-l border-border ${
-                    emailVerified ? "text-green-600 bg-green-50" : "text-primary hover:bg-purple-50"
-                  }`}
-                >
-                  {emailVerified ? <><Check size={14} className="inline" /> Verified</> : "Send OTP"}
-                </button>
-              </div>
-            </div>
-
             <div>
               <label className="block text-sm font-medium mb-1.5">Mobile Number</label>
-              <div className="flex border border-border rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-primary/30">
+              <div className="relative">
+                <Smartphone
+                  size={18}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+                />
                 <input
                   type="tel"
-                  value={form.phone}
-                  onChange={(e) => {
-                    setForm({ ...form, phone: e.target.value.replace(/\D/g, "").slice(0, 10) });
-                    setPhoneVerified(false);
-                  }}
+                  inputMode="numeric"
+                  value={phone}
+                  onChange={(e) =>
+                    setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
+                  }
                   required
-                  maxLength={10}
-                  className="flex-1 px-4 py-2.5 outline-none"
-                  placeholder="10-digit mobile"
+                  pattern="[6-9][0-9]{9}"
+                  className="w-full pl-10 pr-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  placeholder="Enter 10-digit mobile number"
                 />
-                <button
-                  type="button"
-                  onClick={() => sendOtp("phone")}
-                  className={`px-4 text-sm font-semibold border-l border-border ${
-                    phoneVerified ? "text-green-600 bg-green-50" : "text-primary hover:bg-purple-50"
-                  }`}
-                >
-                  {phoneVerified ? <><Check size={14} className="inline" /> Verified</> : "Send OTP"}
-                </button>
               </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  required
-                  className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 pr-10"
-                  placeholder="Min 8 chars, upper, lower, number"
-                />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted">
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1.5">Confirm Password</label>
-              <input
-                type="password"
-                value={form.confirmPassword}
-                onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-                required
-                className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
-            </div>
-
             <button
               type="submit"
-              disabled={loading || !emailVerified || !phoneVerified}
-              className="w-full bg-primary text-white py-3 rounded-lg font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              disabled={loading}
+              className="w-full bg-primary text-white py-3 rounded-lg font-semibold hover:bg-primary-dark disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loading ? <><Loader2 size={18} className="animate-spin" /> Creating...</> : "Create Account"}
+              {loading ? <><Loader2 size={18} className="animate-spin" /> Please wait...</> : "Get OTP"}
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-muted">
             Already have an account?{" "}
-            <Link href="/login" className="text-primary font-semibold hover:underline">Login</Link>
+            <Link href="/login" className="text-primary font-semibold hover:underline">
+              Login
+            </Link>
           </p>
         </div>
       </div>
 
-      {otpModal && (
+      {otpOpen && (
         <OtpModal
-          type={otpModal.type}
-          target={otpModal.target}
+          type="phone"
+          target={phone}
           devOtp={devOtp}
-          onClose={() => setOtpModal(null)}
-          onVerified={() => {
-            if (otpModal.type === "email") setEmailVerified(true);
-            else setPhoneVerified(true);
-            setOtpModal(null);
-            setDevOtp("");
-            setError("");
-          }}
+          onClose={() => setOtpOpen(false)}
+          onVerified={completeRegistration}
           onError={setError}
         />
       )}

@@ -12,6 +12,7 @@ interface Banner {
   image: string;
   link?: string | null;
   bgColor?: string | null;
+  ctaLabel?: string | null;
 }
 
 export function HeroCarousel({ banners }: { banners: Banner[] }) {
@@ -53,7 +54,7 @@ export function HeroCarousel({ banners }: { banners: Banner[] }) {
             href={banner.link || "/products"}
             className="inline-flex items-center gap-2 mt-4 bg-white text-primary px-5 py-2 rounded font-semibold text-sm hover:bg-gray-100 transition-colors"
           >
-            Shop Now <ArrowRight size={14} />
+            {banner.ctaLabel || "Shop Now"} <ArrowRight size={14} />
           </Link>
           <div className="flex gap-4 mt-6 text-xs text-purple-200">
             <span>No Cost EMI</span>

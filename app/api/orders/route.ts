@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCustomerEmailForPayment } from "@/lib/user-email";
 import { requireAuth } from "@/lib/auth";
 import { checkoutSchema } from "@/lib/validations";
 import { generateOrderNumber } from "@/lib/utils";
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { email: true, phone: true, name: true },
+      select: { email: true, emailVerified: true, phone: true, name: true },
     });
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 400 });
@@ -173,7 +174,7 @@ export async function POST(req: NextRequest) {
         amount: total,
         customerId: session.user.id,
         customerName: address.name || user.name || "Customer",
-        customerEmail: user.email,
+        customerEmail: getCustomerEmailForPayment(user),
         customerPhone: address.phone || user.phone || "9999999999",
         orderNote: `WorthKart order ${order.orderNumber}`,
       });

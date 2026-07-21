@@ -4,16 +4,14 @@ import { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Loader2, Smartphone } from "lucide-react";
 import { OtpModal } from "@/components/otp/OtpModal";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [otpModal, setOtpModal] = useState<{
@@ -25,8 +23,8 @@ function LoginForm() {
   const completeSignIn = async () => {
     setLoading(true);
     const result = await signIn("credentials", {
-      email,
-      password,
+      phone,
+      accountType: "buyer",
       redirect: false,
     });
     setLoading(false);
@@ -49,13 +47,13 @@ function LoginForm() {
     const res = await fetch("/api/auth/login-otp/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ phone, accountType: "buyer" }),
     });
     const data = await res.json();
     setLoading(false);
 
     if (!res.ok) {
-      setError(data.error || "Invalid email or password");
+      setError(data.error || "Could not send OTP");
       return;
     }
 
@@ -70,7 +68,7 @@ function LoginForm() {
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-foreground">Welcome Back</h1>
             <p className="text-sm text-muted mt-1">
-              Sign in with your email, password, and OTP verification
+              Login securely using your mobile number and OTP
             </p>
           </div>
 
@@ -82,36 +80,26 @@ function LoginForm() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                placeholder="Enter your email"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Password</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Mobile Number
+              </label>
               <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors pr-10"
-                  placeholder="Enter your password"
+                <Smartphone
+                  size={18}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={phone}
+                  onChange={(e) =>
+                    setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
+                  }
+                  required
+                  pattern="[6-9][0-9]{9}"
+                  className="w-full pl-10 pr-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                  placeholder="Enter 10-digit mobile number"
+                />
               </div>
             </div>
 
@@ -125,7 +113,7 @@ function LoginForm() {
                   <Loader2 size={18} className="animate-spin" /> Sending OTP...
                 </>
               ) : (
-                "Continue with OTP"
+                "Get OTP"
               )}
             </button>
           </form>
@@ -134,12 +122,6 @@ function LoginForm() {
             New to WorthKart?{" "}
             <Link href="/register" className="text-primary font-semibold hover:underline">
               Create an account
-            </Link>
-          </div>
-
-          <div className="mt-4 text-center text-sm">
-            <Link href="/seller/register" className="text-primary hover:underline">
-              Want to sell? Register as Seller →
             </Link>
           </div>
         </div>

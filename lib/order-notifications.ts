@@ -17,7 +17,9 @@ export async function notifyOrderStatusChange(
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: {
-      user: { select: { id: true, email: true, phone: true, name: true } },
+      user: {
+        select: { id: true, email: true, emailVerified: true, phone: true, name: true },
+      },
       address: { select: { phone: true } },
       items: {
         select: { courierName: true, awbCode: true },
@@ -41,8 +43,8 @@ export async function notifyOrderStatusChange(
   const phone = order.user.phone || order.address.phone;
   const orderUrl = `/orders/${order.id}`;
 
-  const results = await Promise.allSettled([
-    sendEmail({
+  const emailNotification = order.user.emailVerified
+    ? sendEmail({
       to: order.user.email,
       subject: `${title} · ${order.orderNumber}`,
       text: body,
@@ -59,7 +61,11 @@ export async function notifyOrderStatusChange(
           </p>
         </div>
       `,
-    }),
+    })
+    : Promise.resolve({ success: false, skipped: true });
+
+  const results = await Promise.allSettled([
+    emailNotification,
     phone ? sendTransactionalSms(phone, body) : Promise.resolve({ success: false }),
     phone ? sendWhatsAppAlert(phone, body) : Promise.resolve({ success: false }),
     sendPushToUser(order.userId, { title, body, url: orderUrl }),

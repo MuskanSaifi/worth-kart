@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { loginSchema } from "@/lib/validations";
+import { buyerLoginSchema, loginSchema } from "@/lib/validations";
 import { authConfig } from "@/lib/auth.config";
 import { isOtpVerifiedRecently } from "@/lib/otp-check";
 import type { Role } from "@/app/generated/prisma/client";
@@ -41,33 +41,50 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        phone: { label: "Mobile", type: "tel" },
+        accountType: { label: "Account type", type: "text" },
       },
       async authorize(credentials) {
-        const parsed = loginSchema.safeParse(credentials);
-        if (!parsed.success) return null;
+        const accountType =
+          credentials.accountType === "admin"
+            ? "admin"
+            : credentials.accountType === "seller"
+              ? "seller"
+              : "buyer";
+        let user;
 
-        const email = parsed.data.email.trim().toLowerCase();
-        const user = await prisma.user.findUnique({
-          where: { email },
-        });
+        if (accountType === "buyer") {
+          const parsed = buyerLoginSchema.safeParse(credentials);
+          if (!parsed.success) return null;
+          user = await prisma.user.findUnique({ where: { phone: parsed.data.phone } });
+          if (!user || user.role !== "BUYER") return null;
+          const phoneOk = await isOtpVerifiedRecently(
+            parsed.data.phone,
+            "phone",
+            LOGIN_OTP_WINDOW_MINUTES
+          );
+          if (!phoneOk) return null;
+        } else {
+          const parsed = loginSchema.safeParse(credentials);
+          if (!parsed.success) return null;
+          user = await prisma.user.findUnique({
+            where: { email: parsed.data.email.trim().toLowerCase() },
+          });
+          const allowedRole = accountType === "admin" ? "ADMIN" : "SELLER";
+          if (!user || user.role !== allowedRole) return null;
+          const valid = await bcrypt.compare(parsed.data.password, user.password);
+          if (!valid) return null;
 
-        if (!user) return null;
-
-        const valid = await bcrypt.compare(parsed.data.password, user.password);
-        if (!valid) return null;
-
-        // Require real 2Factor OTP verified just before login (buyer / seller / admin)
-        const phone = user.phone?.replace(/\D/g, "").slice(-10);
-        const phoneOk = phone
-          ? await isOtpVerifiedRecently(phone, "phone", LOGIN_OTP_WINDOW_MINUTES)
-          : false;
-        const emailOk = await isOtpVerifiedRecently(
-          user.email,
-          "email",
-          LOGIN_OTP_WINDOW_MINUTES
-        );
-        if (!phoneOk && !emailOk) {
-          return null;
+          const phone = user.phone?.replace(/\D/g, "").slice(-10);
+          const phoneOk = phone
+            ? await isOtpVerifiedRecently(phone, "phone", LOGIN_OTP_WINDOW_MINUTES)
+            : false;
+          const emailOk = await isOtpVerifiedRecently(
+            user.email,
+            "email",
+            LOGIN_OTP_WINDOW_MINUTES
+          );
+          if (!phoneOk && !emailOk) return null;
         }
 
         return {

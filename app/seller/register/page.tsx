@@ -136,7 +136,7 @@ export default function SellerRegisterPage() {
       setError(data.error);
       return;
     }
-    router.push("/login?seller=registered");
+    router.push("/seller/login?registered=true");
   };
 
   return (
@@ -390,6 +390,12 @@ export default function SellerRegisterPage() {
             </form>
           )}
         </div>
+        <p className="mt-5 text-center text-sm text-muted">
+          Already registered?{" "}
+          <Link href="/seller/login" className="text-primary font-semibold hover:underline">
+            Seller Login
+          </Link>
+        </p>
       </div>
 
       {otpModal && (
