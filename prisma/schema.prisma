@@ -387,6 +387,23 @@ model Blog {
   author          User     @relation(fields: [authorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
+/// Footer / info pages (Privacy, Terms, FAQ, etc.) — editable by admin
+model SitePage {
+  id             String   @id @default(cuid()) @map("_id")
+  title          String
+  slug           String   @unique
+  contentHtml    String
+  /// ABOUT | HELP | POLICY
+  section        String   @default("ABOUT")
+  sortOrder      Int      @default(0)
+  showInFooter   Boolean  @default(true)
+  isPublished    Boolean  @default(true)
+  seoTitle       String?
+  seoDescription String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
 model Otp {
   id        String   @id @default(cuid()) @map("_id")
   userId    String?

@@ -50,6 +50,7 @@ export default async function AdminDashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {[
           { title: "Homepage Offers", desc: "Edit hero, mid promos and footer banners", href: "/admin/homepage" },
+          { title: "Footer Pages", desc: "Privacy, Terms, FAQ and other footer content", href: "/admin/pages" },
           { title: "Manage Orders", desc: "Update statuses, track EDD and payment state", href: "/admin/orders" },
           { title: "Manage Sellers", desc: "Approve sellers, view verification and products", href: "/admin/sellers" },
           { title: "Manage Categories", desc: "Create unlimited category tree for products", href: "/admin/categories" },

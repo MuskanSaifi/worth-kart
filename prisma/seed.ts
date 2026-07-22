@@ -3,6 +3,7 @@ import { PrismaClient } from "../app/generated/prisma/client";
 import { createPrismaClient } from "../lib/create-prisma";
 import bcrypt from "bcryptjs";
 import { seedCategories } from "./category-seed";
+import { seedSitePages } from "../lib/site-page-seed";
 
 const prisma = createPrismaClient();
 
@@ -459,6 +460,10 @@ async function main() {
   for (const b of banners) {
     await prisma.banner.create({ data: b });
   }
+
+  await seedSitePages(prisma);
+  const sitePageCount = await prisma.sitePage.count();
+  console.log(`   Site pages: ${sitePageCount} seeded`);
 
   // Sample reviews
   const allProducts = await prisma.product.findMany({ take: 3 });

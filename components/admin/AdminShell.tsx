@@ -11,12 +11,14 @@ import {
   Sparkles,
   ShoppingBag,
   ImageIcon,
+  ScrollText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/homepage", label: "Homepage Offers", icon: ImageIcon },
+  { href: "/admin/pages", label: "Footer Pages", icon: ScrollText },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
   { href: "/admin/sellers", label: "Manage Sellers", icon: Users },
   { href: "/admin/categories", label: "Manage Categories", icon: FolderTree },
