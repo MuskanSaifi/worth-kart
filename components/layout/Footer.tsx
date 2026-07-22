@@ -25,13 +25,25 @@ const trustBadges = [
   { title: "24x7 Support", desc: "Dedicated help center" },
 ];
 
+const footerPageSelect = {
+  title: true,
+  slug: true,
+  section: true,
+} as const;
+
+type FooterPageLink = {
+  title: string;
+  slug: string;
+  section: string;
+};
+
 export async function Footer() {
-  let footerPages: Awaited<ReturnType<typeof prisma.sitePage.findMany>> = [];
+  let footerPages: FooterPageLink[] = [];
   try {
     footerPages = await prisma.sitePage.findMany({
       where: { isPublished: true, showInFooter: true },
       orderBy: [{ section: "asc" }, { sortOrder: "asc" }, { title: "asc" }],
-      select: { title: true, slug: true, section: true },
+      select: footerPageSelect,
     });
   } catch (error) {
     console.error("[Footer] Failed to load site pages:", error);
