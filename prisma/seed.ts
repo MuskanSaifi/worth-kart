@@ -4,6 +4,11 @@ import { createPrismaClient } from "../lib/create-prisma";
 import bcrypt from "bcryptjs";
 import { seedCategories } from "./category-seed";
 import { seedSitePages } from "../lib/site-page-seed";
+import {
+  DEFAULT_ABOUT_HTML,
+  DEFAULT_KEYWORD_GROUPS,
+  stringifyKeywordGroups,
+} from "../lib/seo-footer";
 
 const prisma = createPrismaClient();
 
@@ -464,6 +469,22 @@ async function main() {
   await seedSitePages(prisma);
   const sitePageCount = await prisma.sitePage.count();
   console.log(`   Site pages: ${sitePageCount} seeded`);
+
+  await prisma.seoFooterContent.upsert({
+    where: { key: "default" },
+    update: {},
+    create: {
+      key: "default",
+      aboutTitle: "More About WorthKart",
+      aboutHtml: DEFAULT_ABOUT_HTML,
+      keywordsTitle: "Online Shopping",
+      keywordsIntro:
+        "Explore popular categories and trending products on WorthKart — India's shopping destination.",
+      keywordGroups: stringifyKeywordGroups(DEFAULT_KEYWORD_GROUPS),
+      isActive: true,
+    },
+  });
+  console.log("   SEO footer content seeded");
 
   // Sample reviews
   const allProducts = await prisma.product.findMany({ take: 3 });

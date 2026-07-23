@@ -404,6 +404,22 @@ model SitePage {
   updatedAt      DateTime @updatedAt
 }
 
+/// Meesho-style SEO block above footer (About accordion + keyword directory)
+model SeoFooterContent {
+  id             String   @id @default(cuid()) @map("_id")
+  /// Singleton key — always "default"
+  key            String   @unique @default("default")
+  aboutTitle     String   @default("More About WorthKart")
+  aboutHtml      String   @default("")
+  keywordsTitle  String   @default("Online Shopping")
+  keywordsIntro  String?
+  /// JSON: [{ title, links: [{ label, href }] }]
+  keywordGroups  String   @default("[]")
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
 model Otp {
   id        String   @id @default(cuid()) @map("_id")
   userId    String?

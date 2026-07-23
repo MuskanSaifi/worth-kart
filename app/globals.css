@@ -169,3 +169,77 @@ body {
   border-radius: 12px;
   margin: 12px 0;
 }
+
+/* Meesho-style SEO footer — soft greys, compact type, calm spacing */
+.seo-footer-content {
+  color: #8a8a8a;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.seo-footer-content h1,
+.seo-footer-content h2,
+.seo-footer-content h3,
+.seo-footer-content h4,
+.seo-footer-content h5,
+.seo-footer-content h6 {
+  color: #5f5f5f;
+  font-weight: 600;
+  margin: 0.85rem 0 0.35rem;
+  line-height: 1.4;
+}
+
+.seo-footer-content h1:first-child,
+.seo-footer-content h2:first-child,
+.seo-footer-content h3:first-child {
+  margin-top: 0;
+}
+
+.seo-footer-content h1 {
+  font-size: 14px;
+}
+
+.seo-footer-content h2 {
+  font-size: 13px;
+}
+
+.seo-footer-content h3,
+.seo-footer-content h4 {
+  font-size: 12.5px;
+}
+
+.seo-footer-content h5,
+.seo-footer-content h6 {
+  font-size: 12px;
+}
+
+.seo-footer-content p {
+  margin: 0 0 0.65rem;
+  color: #8a8a8a;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.seo-footer-content p:last-child {
+  margin-bottom: 0;
+}
+
+.seo-footer-content ul,
+.seo-footer-content ol {
+  margin: 0.4rem 0 0.65rem;
+  padding-left: 1.15rem;
+}
+
+.seo-footer-content li {
+  margin: 0.2rem 0;
+  color: #8a8a8a;
+}
+
+.seo-footer-content a {
+  color: #7c3aed;
+  text-decoration: none;
+}
+
+.seo-footer-content a:hover {
+  text-decoration: underline;
+}
