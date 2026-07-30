@@ -62,6 +62,8 @@ function ProductsContent() {
         minRating: filters.minRating,
         discount: filters.discount,
         inStock: filters.inStock,
+        gender: filters.gender,
+        color: filters.color,
       }),
     [filters]
   );
@@ -82,6 +84,8 @@ function ProductsContent() {
     if (parsed.minRating) params.set("minRating", parsed.minRating);
     if (parsed.discount) params.set("minDiscount", parsed.discount);
     if (parsed.inStock) params.set("inStock", "true");
+    if (parsed.gender) params.set("gender", parsed.gender);
+    if (parsed.color) params.set("color", parsed.color);
     params.set("sort", sort);
     params.set("limit", "24");
 
@@ -110,7 +114,9 @@ function ProductsContent() {
     (filters.minPrice || filters.maxPrice ? 1 : 0) +
     (filters.minRating ? 1 : 0) +
     (filters.discount ? 1 : 0) +
-    (filters.inStock ? 1 : 0);
+    (filters.inStock ? 1 : 0) +
+    (filters.gender ? 1 : 0) +
+    (filters.color ? 1 : 0);
 
   const onCategorySelect = (slug: string) => {
     applyFilters(emptyFilters());
@@ -205,6 +211,22 @@ function ProductsContent() {
               </button>
             </span>
           )}
+          {filters.gender && (
+            <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
+              {filters.gender}
+              <button type="button" onClick={() => applyFilters({ ...filters, gender: "" })}>
+                <X size={12} />
+              </button>
+            </span>
+          )}
+          {filters.color && (
+            <span className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
+              {filters.color}
+              <button type="button" onClick={() => applyFilters({ ...filters, color: "" })}>
+                <X size={12} />
+              </button>
+            </span>
+          )}
           <button
             type="button"
             onClick={() => applyFilters(emptyFilters())}
@@ -230,13 +252,15 @@ function ProductsContent() {
         {mobileFiltersOpen && (
           <div className="fixed inset-0 z-50 lg:hidden">
             <div className="absolute inset-0 bg-black/40" onClick={() => setMobileFiltersOpen(false)} />
-            <div className="absolute left-0 top-0 bottom-0 w-[85%] max-w-sm bg-white shadow-xl overflow-y-auto">
+            <div className="absolute inset-x-0 bottom-0 top-10 bg-white shadow-xl overflow-hidden flex flex-col rounded-t-2xl">
               <ProductFilters
+                className="border-0 rounded-none h-full"
                 filters={filters}
                 onChange={applyFilters}
                 brands={brands}
                 subcategories={subcategories}
                 activeCategory={category}
+                total={total}
                 onCategorySelect={(slug) => {
                   onCategorySelect(slug);
                   setMobileFiltersOpen(false);
@@ -266,9 +290,11 @@ function ProductsContent() {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-px bg-border">
               {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <div key={product.id} className="bg-white">
+                  <ProductCard product={product} />
+                </div>
               ))}
             </div>
           )}

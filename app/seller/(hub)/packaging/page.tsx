@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { SellerPageHeader, SellerCard } from "@/components/seller/SellerPageHeader";
 import { Barcode, Download, CheckCircle, Loader2 } from "lucide-react";
+import { notify } from "@/lib/notify";
 
 type PackItem = {
   id: string;
@@ -56,7 +57,7 @@ export default function SellerPackagingPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || "Failed to download label");
+        notify.error(data.error || "Failed to download label");
         return;
       }
       setOrders((prev) =>

@@ -7,6 +7,7 @@ import {
   transitionOrderStatus,
   verifyDeliveryOtp,
 } from "@/lib/order-lifecycle";
+import { canDownloadOrderInvoice } from "@/lib/tax-invoice";
 
 export async function GET(
   _req: NextRequest,
@@ -47,13 +48,7 @@ export async function GET(
         canCancel: canBuyerCancel(order.status),
         canReturn: canBuyerRequestReturn(order.status),
         canReorder: true,
-        canDownloadInvoice:
-          order.paymentStatus === "PAID" ||
-          order.status === "DELIVERED" ||
-          order.status === "CONFIRMED" ||
-          order.status === "PACKED" ||
-          order.status === "SHIPPED" ||
-          order.status === "OUT_FOR_DELIVERY",
+        canDownloadInvoice: canDownloadOrderInvoice(order),
       },
     });
   } catch {

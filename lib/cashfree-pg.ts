@@ -34,6 +34,7 @@ export async function createCashfreePgOrder(params: {
   customerEmail: string;
   customerPhone: string;
   orderNote?: string;
+  returnUrl?: string;
 }): Promise<CashfreePgOrderResponse> {
   const configError = getCashfreePgConfigError();
   if (configError) {
@@ -41,7 +42,9 @@ export async function createCashfreePgOrder(params: {
   }
 
   const orderAmount = Math.round(params.amount * 100) / 100;
-  const returnUrl = `${getAppBaseUrl()}/checkout/return?order_id=${encodeURIComponent(params.orderId)}`;
+  const returnUrl =
+    params.returnUrl ||
+    `${getAppBaseUrl()}/checkout/return?order_id=${encodeURIComponent(params.orderId)}`;
 
   const res = await fetch(`${cashfreePgBaseUrl()}/pg/orders`, {
     method: "POST",

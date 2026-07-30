@@ -8,6 +8,7 @@ import { formatPrice } from "@/lib/utils";
 import { CartProductRail } from "@/components/cart/CartProductRail";
 import { getRecentlyViewedExcluding } from "@/lib/recently-viewed";
 import type { ProductCardData } from "@/components/products/ProductCard";
+import { notify } from "@/lib/notify";
 import {
   Minus,
   Plus,
@@ -72,8 +73,9 @@ export default function CartPage() {
         body: JSON.stringify({ productId }),
       });
       await removeItem(itemId);
+      notify.success("Saved for later");
     } catch {
-      alert("Could not save for later");
+      notify.error("Could not save for later");
     }
     setSavingId(null);
   };

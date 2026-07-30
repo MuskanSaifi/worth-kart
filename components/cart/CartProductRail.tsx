@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { useCart } from "@/components/providers/CartProvider";
+import { notify } from "@/lib/notify";
 import { useSession } from "next-auth/react";
 import type { ProductCardData } from "@/components/products/ProductCard";
 
@@ -43,8 +44,9 @@ export function CartProductRail({
     }
     try {
       await addToCart(productId);
+      notify.success("Added to cart");
     } catch {
-      alert("Could not add to cart");
+      notify.error("Could not add to cart");
     }
   };
 

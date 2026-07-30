@@ -7,10 +7,14 @@ import {
   Loader2,
   Pencil,
   Plus,
+  Smartphone,
   Trash2,
   ToggleLeft,
   ToggleRight,
+  X,
 } from "lucide-react";
+import { useConfirm } from "@/components/providers/ConfirmProvider";
+import { notify } from "@/lib/notify";
 
 type Banner = {
   id: string;
@@ -18,6 +22,8 @@ type Banner = {
   subtitle?: string | null;
   image: string;
   imagePublicId?: string | null;
+  appImage?: string | null;
+  appImagePublicId?: string | null;
   link?: string | null;
   bgColor?: string | null;
   ctaLabel?: string | null;
@@ -33,6 +39,8 @@ type FormState = {
   subtitle: string;
   image: string;
   imagePublicId: string;
+  appImage: string;
+  appImagePublicId: string;
   link: string;
   bgColor: string;
   ctaLabel: string;
@@ -47,11 +55,13 @@ const emptyForm = (placement: FormState["placement"] = "HERO"): FormState => ({
   subtitle: "",
   image: "",
   imagePublicId: "",
+  appImage: "",
+  appImagePublicId: "",
   link: "/products",
   bgColor: "#5b21b6",
   ctaLabel: "Shop Now",
   placement,
-  variant: placement === "PROMO" ? "STANDARD" : "STANDARD",
+  variant: "STANDARD",
   isActive: true,
   sortOrder: 0,
 });
@@ -64,12 +74,15 @@ const PLACEMENT_HELP: Record<string, string> = {
 
 export function AdminBannersManager({ initialBanners }: { initialBanners: Banner[] }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const fileRef = useRef<HTMLInputElement>(null);
+  const appFileRef = useRef<HTMLInputElement>(null);
   const [banners, setBanners] = useState(initialBanners);
   const [form, setForm] = useState<FormState | null>(null);
   const [filter, setFilter] = useState<"ALL" | "HERO" | "PROMO" | "FOOTER">("ALL");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [appUploading, setAppUploading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -78,34 +91,52 @@ export function AdminBannersManager({ initialBanners }: { initialBanners: Banner
 
   const visible = banners.filter((b) => (filter === "ALL" ? true : b.placement === filter));
 
-  const uploadImage = async (file: File) => {
-    setUploading(true);
+  const uploadImage = async (file: File, forApp = false) => {
+    if (forApp) setAppUploading(true);
+    else setUploading(true);
     setError("");
     const body = new FormData();
     body.set("file", file);
     body.set("folder", "banners");
     const res = await fetch("/api/upload", { method: "POST", body });
     const data = await res.json();
-    setUploading(false);
+    if (forApp) setAppUploading(false);
+    else setUploading(false);
     if (!res.ok) {
       setError(data.error || "Upload failed");
       return;
     }
     setForm((prev) =>
       prev
-        ? {
-            ...prev,
-            image: data.url,
-            imagePublicId: data.publicId || "",
-          }
+        ? forApp
+          ? { ...prev, appImage: data.url, appImagePublicId: data.publicId || "" }
+          : { ...prev, image: data.url, imagePublicId: data.publicId || "" }
         : prev
     );
+  };
+
+  const removeAppImage = async () => {
+    if (!form) return;
+    // If editing existing banner, tell backend to delete from Cloudinary
+    if (form.id && form.appImagePublicId) {
+      await fetch("/api/banners", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: form.id,
+          appImage: null,
+          appImagePublicId: null,
+        }),
+      });
+    }
+    setForm({ ...form, appImage: "", appImagePublicId: "" });
+    notify.success("App image removed");
   };
 
   const save = async () => {
     if (!form) return;
     if (!form.title.trim() || !form.image) {
-      setError("Title and image are required");
+      setError("Title and website image are required");
       return;
     }
     setSaving(true);
@@ -118,6 +149,8 @@ export function AdminBannersManager({ initialBanners }: { initialBanners: Banner
       bgColor: form.bgColor || null,
       ctaLabel: form.ctaLabel || null,
       imagePublicId: form.imagePublicId || null,
+      appImage: form.appImage || null,
+      appImagePublicId: form.appImagePublicId || null,
     };
     const res = await fetch("/api/banners", {
       method: form.id ? "PATCH" : "POST",
@@ -145,11 +178,20 @@ export function AdminBannersManager({ initialBanners }: { initialBanners: Banner
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Delete this banner?")) return;
+    const ok = await confirm("Delete this banner? App image will also be deleted from Cloudinary.", {
+      title: "Delete banner",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     const res = await fetch(`/api/banners?id=${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
-    if (!res.ok) return;
+    if (!res.ok) {
+      notify.error("Could not delete banner");
+      return;
+    }
+    notify.success("Banner deleted");
     router.refresh();
   };
 
@@ -198,12 +240,7 @@ export function AdminBannersManager({ initialBanners }: { initialBanners: Banner
               <label className="text-xs font-medium text-muted">Placement</label>
               <select
                 value={form.placement}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    placement: e.target.value as FormState["placement"],
-                  })
-                }
+                onChange={(e) => setForm({ ...form, placement: e.target.value as FormState["placement"] })}
                 className="mt-1 w-full px-3 py-2 border border-border rounded-lg text-sm"
               >
                 <option value="HERO">HERO — top carousel</option>
@@ -216,12 +253,7 @@ export function AdminBannersManager({ initialBanners }: { initialBanners: Banner
               <label className="text-xs font-medium text-muted">Variant</label>
               <select
                 value={form.variant}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    variant: e.target.value as FormState["variant"],
-                  })
-                }
+                onChange={(e) => setForm({ ...form, variant: e.target.value as FormState["variant"] })}
                 className="mt-1 w-full px-3 py-2 border border-border rounded-lg text-sm"
               >
                 <option value="STANDARD">STANDARD (large card)</option>
@@ -278,46 +310,107 @@ export function AdminBannersManager({ initialBanners }: { initialBanners: Banner
               <input
                 type="number"
                 value={form.sortOrder}
-                onChange={(e) =>
-                  setForm({ ...form, sortOrder: Number(e.target.value) || 0 })
-                }
+                onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) || 0 })}
                 className="mt-1 w-full px-3 py-2 border border-border rounded-lg text-sm"
               />
             </div>
           </div>
 
-          <div>
-            <label className="text-xs font-medium text-muted">Banner image</label>
-            <div className="mt-2 flex items-start gap-4">
-              <div className="w-40 h-24 rounded-lg border border-border bg-gray-50 overflow-hidden flex items-center justify-center">
-                {form.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={form.image} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <ImagePlus className="text-muted" size={22} />
-                )}
+          {/* ── Website Image ───────────────────────────────── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-muted flex items-center gap-1.5 mb-2">
+                🖥️ Website Banner Image <span className="text-danger">*</span>
+              </label>
+              <div className="flex items-start gap-4">
+                <div className="w-40 h-24 rounded-lg border border-border bg-gray-50 overflow-hidden flex items-center justify-center shrink-0">
+                  {form.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={form.image} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <ImagePlus className="text-muted" size={22} />
+                  )}
+                </div>
+                <div>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void uploadImage(file, false);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={uploading}
+                    className="px-3 py-2 border border-border rounded-lg text-sm font-medium inline-flex items-center gap-2"
+                  >
+                    {uploading ? <Loader2 size={14} className="animate-spin" /> : <ImagePlus size={14} />}
+                    {form.image ? "Change" : "Upload"} image
+                  </button>
+                  <p className="text-[11px] text-muted mt-1">Landscape · min 1200×400px</p>
+                </div>
               </div>
-              <div>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) void uploadImage(file);
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => fileRef.current?.click()}
-                  disabled={uploading}
-                  className="px-3 py-2 border border-border rounded-lg text-sm font-medium inline-flex items-center gap-2"
-                >
-                  {uploading ? <Loader2 size={14} className="animate-spin" /> : <ImagePlus size={14} />}
-                  Upload image
-                </button>
-                <p className="text-[11px] text-muted mt-1">Saved to Cloudinary · banners folder</p>
+            </div>
+
+            {/* ── App Image ───────────────────────────────────── */}
+            <div>
+              <label className="text-xs font-semibold text-muted flex items-center gap-1.5 mb-2">
+                <Smartphone size={13} /> App Banner Image
+                <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded ml-1">
+                  Optional
+                </span>
+              </label>
+              <div className="flex items-start gap-4">
+                <div className="w-24 h-24 rounded-lg border border-blue-200 bg-blue-50 overflow-hidden flex items-center justify-center shrink-0 relative">
+                  {form.appImage ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={form.appImage} alt="" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={removeAppImage}
+                        className="absolute top-1 right-1 bg-white/80 rounded-full p-0.5 hover:bg-white"
+                        title="Remove app image"
+                      >
+                        <X size={12} className="text-danger" />
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1 text-blue-400">
+                      <Smartphone size={20} />
+                      <span className="text-[10px]">No app img</span>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <input
+                    ref={appFileRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void uploadImage(file, true);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => appFileRef.current?.click()}
+                    disabled={appUploading}
+                    className="px-3 py-2 border border-blue-300 text-blue-700 bg-blue-50 rounded-lg text-sm font-medium inline-flex items-center gap-2 hover:bg-blue-100"
+                  >
+                    {appUploading ? <Loader2 size={14} className="animate-spin" /> : <Smartphone size={14} />}
+                    {form.appImage ? "Change" : "Upload"} app image
+                  </button>
+                  <p className="text-[11px] text-muted mt-1">Square/portrait · min 800×400px</p>
+                  <p className="text-[11px] text-blue-600 mt-0.5">
+                    If not set, website image is used on app
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -348,7 +441,7 @@ export function AdminBannersManager({ initialBanners }: { initialBanners: Banner
       <div className="space-y-3">
         {visible.length === 0 && (
           <p className="text-sm text-muted py-8 text-center border border-dashed border-border rounded-xl">
-            No banners yet for this section. Click “Add banner”.
+            No banners yet for this section. Click "Add banner".
           </p>
         )}
         {visible.map((banner) => (
@@ -356,10 +449,24 @@ export function AdminBannersManager({ initialBanners }: { initialBanners: Banner
             key={banner.id}
             className="rounded-xl border border-border bg-white p-4 flex gap-4 items-start shadow-sm"
           >
+            {/* Website image */}
             <div className="w-28 h-20 rounded-lg overflow-hidden bg-gray-100 shrink-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={banner.image} alt="" className="w-full h-full object-cover" />
             </div>
+            {/* App image (if any) */}
+            {banner.appImage && (
+              <div className="w-16 h-16 rounded-lg overflow-hidden bg-blue-50 border border-blue-200 shrink-0 flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={banner.appImage} alt="app" className="w-full h-full object-cover" />
+              </div>
+            )}
+            {!banner.appImage && (
+              <div className="w-16 h-16 rounded-lg bg-blue-50 border border-dashed border-blue-200 shrink-0 flex flex-col items-center justify-center">
+                <Smartphone size={16} className="text-blue-300" />
+                <span className="text-[9px] text-blue-400 mt-0.5">no app img</span>
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap gap-2 mb-1">
                 <span className="text-[10px] font-bold uppercase tracking-wide bg-purple-50 text-primary px-2 py-0.5 rounded">
@@ -371,6 +478,11 @@ export function AdminBannersManager({ initialBanners }: { initialBanners: Banner
                 {!banner.isActive && (
                   <span className="text-[10px] font-bold uppercase tracking-wide bg-red-50 text-danger px-2 py-0.5 rounded">
                     Hidden
+                  </span>
+                )}
+                {banner.appImage && (
+                  <span className="text-[10px] font-bold uppercase tracking-wide bg-blue-50 text-blue-700 px-2 py-0.5 rounded flex items-center gap-0.5">
+                    <Smartphone size={9} /> App img
                   </span>
                 )}
               </div>
@@ -393,6 +505,8 @@ export function AdminBannersManager({ initialBanners }: { initialBanners: Banner
                     subtitle: banner.subtitle || "",
                     image: banner.image,
                     imagePublicId: banner.imagePublicId || "",
+                    appImage: banner.appImage || "",
+                    appImagePublicId: banner.appImagePublicId || "",
                     link: banner.link || "",
                     bgColor: banner.bgColor || "#5b21b6",
                     ctaLabel: banner.ctaLabel || "Shop Now",

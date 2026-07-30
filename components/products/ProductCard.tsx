@@ -7,6 +7,7 @@ import { formatPrice } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { useCart } from "@/components/providers/CartProvider";
+import { notify } from "@/lib/notify";
 
 export interface ProductCardData {
   id: string;
@@ -55,8 +56,9 @@ export function ProductCard({ product }: { product: ProductCardData }) {
     setAdding(true);
     try {
       await addToCart(product.id);
+      notify.success("Added to cart");
     } catch {
-      alert("Could not add to cart");
+      notify.error("Could not add to cart");
     }
     setAdding(false);
   };

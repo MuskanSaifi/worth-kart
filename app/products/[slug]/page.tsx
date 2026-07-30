@@ -11,6 +11,7 @@ import { RelatedProductsSection } from "@/components/products/RelatedProductsSec
 import { SimilarProductsCarousel } from "@/components/products/SimilarProductsCarousel";
 import { CustomerReviewsSection } from "@/components/products/CustomerReviewsSection";
 import { TrackProductView } from "@/components/products/TrackProductView";
+import { RecentlyViewedSection } from "@/components/products/RecentlyViewedSection";
 import { isProductPubliclyVisible } from "@/lib/products";
 import {
   getCategoryBreadcrumb,
@@ -262,6 +263,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
         </div>
 
         <RelatedProductsSection products={relatedFiltered} />
+        <RecentlyViewedSection excludeId={product.id} />
       </article>
     </>
   );

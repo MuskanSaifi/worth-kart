@@ -5,6 +5,8 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Home, Loader2, MapPin, Plus, Star, Trash2 } from "lucide-react";
 import type { ReverseGeocodeResult } from "@/lib/geocode";
+import { useConfirm } from "@/components/providers/ConfirmProvider";
+import { notify } from "@/lib/notify";
 
 const MapLocationPicker = dynamic(
   () =>
@@ -54,6 +56,7 @@ export function SavedAddressesManager({
   defaultPhone?: string | null;
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [addresses, setAddresses] = useState(initialAddresses);
   const [showMap, setShowMap] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -149,13 +152,22 @@ export function SavedAddressesManager({
   };
 
   const removeAddress = async (id: string) => {
-    if (!confirm("Delete this address?")) return;
+    const ok = await confirm("Delete this address?", {
+      title: "Delete address",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     setBusyId(id);
     const res = await fetch(`/api/addresses?id=${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
     setBusyId("");
-    if (!res.ok) return;
+    if (!res.ok) {
+      notify.error("Could not delete address");
+      return;
+    }
+    notify.success("Address deleted");
     setAddresses((prev) => {
       const next = prev.filter((a) => a.id !== id);
       if (next.length && !next.some((a) => a.isDefault)) {

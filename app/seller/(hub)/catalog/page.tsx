@@ -6,6 +6,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { Upload, ImageIcon, HelpCircle, ExternalLink, Trash2 } from "lucide-react";
 import { SellerPageHeader } from "@/components/seller/SellerPageHeader";
+import { useConfirm } from "@/components/providers/ConfirmProvider";
+import { notify } from "@/lib/notify";
 
 interface CatalogProduct {
   id: string;
@@ -41,17 +43,24 @@ function CatalogContent() {
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [stats, setStats] = useState({ total: 0, single: 0, bulk: 0, qcPass: 0 });
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const confirm = useConfirm();
 
   const deleteProduct = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"? Images will be removed from Cloudinary.`)) return;
+    const ok = await confirm(`Delete "${name}"? Images will be removed from Cloudinary.`, {
+      title: "Delete product",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     setDeletingId(id);
     const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
     const data = await res.json();
     setDeletingId(null);
     if (!res.ok) {
-      alert(data.error || "Delete failed");
+      notify.error(data.error || "Delete failed");
       return;
     }
+    notify.success("Product deleted");
     setProducts((prev) => prev.filter((p) => p.id !== id));
   };
 

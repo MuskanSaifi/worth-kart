@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { buildOrderInvoicePdf } from "@/lib/invoice-pdf";
+import { canDownloadOrderInvoice } from "@/lib/tax-invoice";
 
 export async function GET(
   _req: NextRequest,
@@ -9,6 +11,21 @@ export async function GET(
   try {
     const session = await requireAuth();
     const { id } = await params;
+
+    const order = await prisma.order.findFirst({
+      where: { id, userId: session.user.id },
+      select: { id: true, status: true, paymentMethod: true, paymentStatus: true },
+    });
+    if (!order) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+    if (!canDownloadOrderInvoice(order)) {
+      return NextResponse.json(
+        { error: "Invoice is available after your order is shipped" },
+        { status: 403 }
+      );
+    }
+
     const invoice = await buildOrderInvoicePdf(id, session.user.id);
     if (!invoice) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });

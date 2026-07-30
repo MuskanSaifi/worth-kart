@@ -17,6 +17,8 @@ import { OrderTrackingProgress } from "@/components/orders/OrderTrackingProgress
 import { OrderTrackingTimeline } from "@/components/orders/OrderTrackingTimeline";
 import { PushNotificationToggle } from "@/components/orders/PushNotificationToggle";
 import { formatPrice } from "@/lib/utils";
+import { useConfirm } from "@/components/providers/ConfirmProvider";
+import { notify } from "@/lib/notify";
 
 interface OrderDetail {
   id: string;
@@ -80,6 +82,7 @@ export default function OrderDetailPage() {
   const [showReturn, setShowReturn] = useState(false);
   const [deliveryOtp, setDeliveryOtp] = useState("");
   const [msg, setMsg] = useState("");
+  const confirm = useConfirm();
 
   async function load() {
     const r = await fetch(`/api/orders/${id}`);
@@ -96,7 +99,12 @@ export default function OrderDetailPage() {
   }, [id]);
 
   async function cancelOrder() {
-    if (!confirm("Cancel this order?")) return;
+    const ok = await confirm("Cancel this order?", {
+      title: "Cancel order",
+      confirmLabel: "Cancel order",
+      destructive: true,
+    });
+    if (!ok) return;
     setBusy("cancel");
     const res = await fetch(`/api/orders/${id}`, {
       method: "PATCH",
@@ -105,9 +113,13 @@ export default function OrderDetailPage() {
     });
     const d = await res.json();
     setBusy("");
-    if (!res.ok) setMsg(d.error || "Cancel failed");
-    else {
+    if (!res.ok) {
+      const err = d.error || "Cancel failed";
+      setMsg(err);
+      notify.error(err);
+    } else {
       setMsg("Order cancelled.");
+      notify.success("Order cancelled");
       await load();
     }
   }
@@ -309,7 +321,7 @@ export default function OrderDetailPage() {
               href={`/api/orders/${order.id}/invoice`}
               className="inline-flex items-center gap-1.5 text-sm px-3 py-2 border rounded-lg hover:bg-gray-50"
             >
-              <Download size={15} /> Invoice PDF
+              <Download size={15} /> Tax Invoice (PDF)
             </a>
           )}
           {actions?.canReorder && (

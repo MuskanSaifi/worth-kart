@@ -12,6 +12,7 @@ import {
   getNextSellerStatus,
   getTrackingHeadline,
 } from "@/lib/order-status";
+import { notify } from "@/lib/notify";
 
 interface OrderItem {
   id: string;
@@ -81,7 +82,7 @@ function OrdersContent() {
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || "Failed to update status");
+        notify.error(data.error || "Failed to update status");
         return;
       }
       setOrders((prev) =>
@@ -99,6 +100,7 @@ function OrdersContent() {
             : o
         )
       );
+      notify.success(`Order marked as ${newStatus.replace(/_/g, " ").toLowerCase()}`);
     } finally {
       setBusyId(null);
     }
@@ -115,7 +117,7 @@ function OrdersContent() {
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || "Simulation failed");
+        notify.error(data.error || "Simulation failed");
         return;
       }
       setOrders((prev) =>
@@ -138,7 +140,7 @@ function OrdersContent() {
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || "Failed to download label");
+        notify.error(data.error || "Failed to download label");
         return;
       }
       setOrders((prev) =>

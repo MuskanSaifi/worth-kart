@@ -2,10 +2,31 @@ export const CASHFREE_PG_API_VERSION = "2023-08-01";
 
 export function getAppBaseUrl(): string {
   return (
+    process.env.APP_PUBLIC_URL ||
     process.env.NEXTAUTH_URL ||
     process.env.NEXT_PUBLIC_APP_URL ||
     "http://localhost:3000"
-  );
+  ).replace(/\/$/, "");
+}
+
+/** Prefer the Host the client actually used (LAN IP), never force localhost for mobile. */
+export function getRequestPublicOrigin(req: {
+  headers: Headers;
+  nextUrl: { origin: string; protocol: string };
+}): string {
+  const forwardedHost = req.headers.get("x-forwarded-host");
+  const host = (forwardedHost || req.headers.get("host") || "").split(",")[0]?.trim();
+  const forwardedProto = req.headers.get("x-forwarded-proto");
+  const proto = (forwardedProto || req.nextUrl.protocol.replace(":", "") || "http").split(",")[0]?.trim();
+
+  if (host && !/^localhost(?::\d+)?$/i.test(host) && !/^127\.0\.0\.1(?::\d+)?$/i.test(host)) {
+    return `${proto}://${host}`.replace(/\/$/, "");
+  }
+
+  const configured = getAppBaseUrl();
+  if (!/localhost|127\.0\.0\.1/i.test(configured)) return configured;
+
+  return req.nextUrl.origin.replace(/\/$/, "");
 }
 
 export function isCashfreePgConfigured(): boolean {

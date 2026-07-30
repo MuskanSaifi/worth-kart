@@ -279,8 +279,23 @@ model Order {
   deliveryOtpExpiresAt DateTime?
   items                OrderItem[]
   events               OrderEvent[]
+  taxInvoices          TaxInvoice[]
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
+}
+
+/// Tax invoice issued when order ships (one per seller per order).
+model TaxInvoice {
+  id            String   @id @default(cuid()) @map("_id")
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sellerId      String
+  invoiceNumber String   @unique
+  invoiceDate   DateTime
+  createdAt     DateTime @default(now())
+
+  @@unique([orderId, sellerId])
+  @@index([orderId])
 }
 
 model OrderEvent {
@@ -351,21 +366,24 @@ model WishlistItem {
 }
 
 model Banner {
-  id            String          @id @default(cuid()) @map("_id")
-  title         String
-  subtitle      String?
-  image         String
-  imagePublicId String?
-  link          String?
-  bgColor       String?
-  ctaLabel      String?
+  id                 String   @id @default(cuid()) @map("_id")
+  title              String
+  subtitle           String?
+  image              String
+  imagePublicId      String?
+  /// Separate portrait/square image for the mobile app (optional — falls back to image)
+  appImage           String?
+  appImagePublicId   String?
+  link               String?
+  bgColor            String?
+  ctaLabel           String?
   /// HERO = top carousel, PROMO = mid offers grid, FOOTER = bottom strip
-  placement     String          @default("HERO")
+  placement          String   @default("HERO")
   /// STANDARD = large promo card, COMPACT = small tile (EMI/Exchange style)
-  variant       String          @default("STANDARD")
-  isActive      Boolean         @default(true)
-  sortOrder     Int             @default(0)
-  createdAt     DateTime        @default(now())
+  variant            String   @default("STANDARD")
+  isActive           Boolean  @default(true)
+  sortOrder          Int      @default(0)
+  createdAt          DateTime @default(now())
 }
 
 model Blog {

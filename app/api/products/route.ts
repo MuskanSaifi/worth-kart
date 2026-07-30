@@ -25,12 +25,15 @@ export async function GET(req: NextRequest) {
     const minRating = searchParams.get("minRating");
     const minDiscount = searchParams.get("minDiscount") || searchParams.get("discount");
     const inStock = searchParams.get("inStock");
+    const gender = searchParams.get("gender") || "";
+    const color = searchParams.get("color") || "";
     const sort = searchParams.get("sort") || "best";
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
     const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = { ...publicProductFilter };
+    const andFilters: Record<string, unknown>[] = [];
     let categoryIds: string[] | null = null;
     let rootCategoryId: string | null = null;
     let allCats: { id: string; parentId: string | null }[] = [];
@@ -87,6 +90,28 @@ export async function GET(req: NextRequest) {
 
     if (inStock === "true") {
       where.stock = { gt: 0 };
+    }
+
+    if (gender) {
+      andFilters.push({
+        OR: [
+          { tags: { contains: gender } },
+          { name: { contains: gender } },
+          { description: { contains: gender } },
+        ],
+      });
+    }
+    if (color) {
+      andFilters.push({
+        OR: [
+          { tags: { contains: color } },
+          { name: { contains: color } },
+          { description: { contains: color } },
+        ],
+      });
+    }
+    if (andFilters.length) {
+      where.AND = andFilters;
     }
 
     // Facet brands from same category scope (ignore brand filter so options stay visible)
@@ -151,6 +176,21 @@ export async function GET(req: NextRequest) {
         .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
         .map(([name, count]) => ({ name, count })),
       subcategories: subcategories.map(({ name, slug }) => ({ name, slug })),
+      genders: ["Women", "Men", "Boys", "Girls", "Unisex"],
+      colors: [
+        "Black",
+        "White",
+        "Red",
+        "Blue",
+        "Green",
+        "Pink",
+        "Yellow",
+        "Purple",
+        "Grey",
+        "Brown",
+        "Beige",
+        "Orange",
+      ],
     };
 
     const useRanking = sort === "best" || sort === "relevance";

@@ -12,6 +12,8 @@ const bannerSchema = z.object({
   subtitle: z.string().optional().nullable(),
   image: z.string().min(1, "Image is required"),
   imagePublicId: z.string().optional().nullable(),
+  appImage: z.string().optional().nullable(),
+  appImagePublicId: z.string().optional().nullable(),
   link: z.string().optional().nullable(),
   bgColor: z.string().optional().nullable(),
   ctaLabel: z.string().optional().nullable(),
@@ -68,6 +70,8 @@ export async function POST(req: NextRequest) {
         bgColor: parsed.data.bgColor || null,
         ctaLabel: parsed.data.ctaLabel || null,
         imagePublicId: parsed.data.imagePublicId || null,
+        appImage: parsed.data.appImage || null,
+        appImagePublicId: parsed.data.appImagePublicId || null,
         isActive: parsed.data.isActive ?? true,
         sortOrder: parsed.data.sortOrder ?? count,
       },
@@ -107,14 +111,23 @@ export async function PATCH(req: NextRequest) {
       await deleteFromCloudinary(existing.imagePublicId);
     }
 
+    // Delete old app image from Cloudinary if replaced or removed
+    const appPid = existing.appImagePublicId;
+    if (parsed.data.appImagePublicId !== undefined && appPid && parsed.data.appImagePublicId !== appPid) {
+      await deleteFromCloudinary(appPid);
+    }
+
+    const { appImage, appImagePublicId, ...rest } = parsed.data;
     const banner = await prisma.banner.update({
       where: { id },
       data: {
-        ...parsed.data,
+        ...rest,
         subtitle: parsed.data.subtitle === undefined ? undefined : parsed.data.subtitle || null,
         link: parsed.data.link === undefined ? undefined : parsed.data.link || null,
         bgColor: parsed.data.bgColor === undefined ? undefined : parsed.data.bgColor || null,
         ctaLabel: parsed.data.ctaLabel === undefined ? undefined : parsed.data.ctaLabel || null,
+        appImage: appImage === undefined ? undefined : appImage || null,
+        appImagePublicId: appImagePublicId === undefined ? undefined : appImagePublicId || null,
       },
     });
 
@@ -140,6 +153,9 @@ export async function DELETE(req: NextRequest) {
 
     if (existing.imagePublicId) {
       await deleteFromCloudinary(existing.imagePublicId);
+    }
+    if (existing.appImagePublicId) {
+      await deleteFromCloudinary(existing.appImagePublicId);
     }
 
     await prisma.banner.delete({ where: { id } });

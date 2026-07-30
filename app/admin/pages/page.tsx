@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Plus, Pencil, Trash2, Loader2, ExternalLink } from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { SECTION_LABELS, sitePagePath, type SitePageSection } from "@/lib/site-page-admin";
+import { useConfirm } from "@/components/providers/ConfirmProvider";
+import { notify } from "@/lib/notify";
 
 interface PageRow {
   id: string;
@@ -21,6 +23,7 @@ export default function AdminSitePagesPage() {
   const [pages, setPages] = useState<PageRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
+  const confirm = useConfirm();
 
   const load = () => {
     setLoading(true);
@@ -35,10 +38,22 @@ export default function AdminSitePagesPage() {
   }, []);
 
   const deletePage = async (id: string, title: string) => {
-    if (!confirm(`Delete page "${title}"?`)) return;
+    const ok = await confirm(`Delete page "${title}"?`, {
+      title: "Delete page",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     const res = await fetch(`/api/admin/pages/${id}`, { method: "DELETE" });
     const data = await res.json();
-    setMsg(res.ok ? "Page deleted" : data.error || "Delete failed");
+    if (res.ok) {
+      setMsg("Page deleted");
+      notify.success("Page deleted");
+    } else {
+      const err = data.error || "Delete failed";
+      setMsg(err);
+      notify.error(err);
+    }
     load();
   };
 

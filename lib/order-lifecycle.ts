@@ -5,6 +5,7 @@ import { computeEstimatedDelivery, statusTitle } from "@/lib/order-messages";
 import { notifyOrderStatusChange } from "@/lib/order-notifications";
 import { generateOtp4 } from "@/lib/utils";
 import type { OrderStatus } from "@/lib/order-status";
+import { ensureTaxInvoicesForOrder } from "@/lib/tax-invoice";
 
 export type OrderEventSource = "system" | "seller" | "buyer" | "courier" | "admin";
 
@@ -90,6 +91,12 @@ export async function transitionOrderStatus(opts: TransitionOpts) {
     void notifyOrderStatusChange(opts.orderId, opts.status, {
       deliveryOtp,
     }).catch((e) => console.warn("[transitionOrderStatus] notify", e));
+  }
+
+  if (opts.status === "SHIPPED") {
+    void ensureTaxInvoicesForOrder(opts.orderId).catch((e) =>
+      console.warn("[transitionOrderStatus] tax invoice", e)
+    );
   }
 
   return { order: updated, deliveryOtp, unchanged: false };

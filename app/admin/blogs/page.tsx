@@ -5,6 +5,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { useConfirm } from "@/components/providers/ConfirmProvider";
+import { notify } from "@/lib/notify";
 
 interface BlogRow {
   id: string;
@@ -22,6 +24,7 @@ export default function AdminBlogsPage() {
   const [blogs, setBlogs] = useState<BlogRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
+  const confirm = useConfirm();
 
   const load = () => {
     setLoading(true);
@@ -36,10 +39,21 @@ export default function AdminBlogsPage() {
   }, []);
 
   const deleteBlog = async (id: string, title: string) => {
-    if (!confirm(`Delete blog "${title}"? Images will also be removed from Cloudinary.`)) return;
+    const ok = await confirm(
+      `Delete blog "${title}"? Images will also be removed from Cloudinary.`,
+      { title: "Delete blog", confirmLabel: "Delete", destructive: true }
+    );
+    if (!ok) return;
     const res = await fetch(`/api/admin/blogs/${id}`, { method: "DELETE" });
     const data = await res.json();
-    setMsg(res.ok ? "Blog deleted" : data.error || "Delete failed");
+    if (res.ok) {
+      setMsg("Blog deleted");
+      notify.success("Blog deleted");
+    } else {
+      const err = data.error || "Delete failed";
+      setMsg(err);
+      notify.error(err);
+    }
     load();
   };
 

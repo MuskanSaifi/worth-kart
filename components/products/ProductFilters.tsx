@@ -10,6 +10,8 @@ export type ProductFilterState = {
   minRating: string;
   discount: string;
   inStock: boolean;
+  gender: string;
+  color: string;
 };
 
 export const emptyFilters = (): ProductFilterState => ({
@@ -19,17 +21,22 @@ export const emptyFilters = (): ProductFilterState => ({
   minRating: "",
   discount: "",
   inStock: false,
+  gender: "",
+  color: "",
 });
 
 type ProductFiltersProps = {
   filters: ProductFilterState;
   onChange: (next: ProductFilterState) => void;
   brands: string[];
+  genders?: string[];
+  colors?: string[];
   subcategories?: { name: string; slug: string }[];
   activeCategory?: string;
   onCategorySelect?: (slug: string) => void;
   className?: string;
   onCloseMobile?: () => void;
+  total?: number;
 };
 
 function Section({
@@ -61,11 +68,27 @@ export function ProductFilters({
   filters,
   onChange,
   brands,
+  genders = ["Women", "Men", "Boys", "Girls", "Unisex"],
+  colors = [
+    "Black",
+    "White",
+    "Red",
+    "Blue",
+    "Green",
+    "Pink",
+    "Yellow",
+    "Purple",
+    "Grey",
+    "Brown",
+    "Beige",
+    "Orange",
+  ],
   subcategories = [],
   activeCategory,
   onCategorySelect,
   className = "",
   onCloseMobile,
+  total,
 }: ProductFiltersProps) {
   const hasActive =
     filters.brands.length > 0 ||
@@ -73,7 +96,9 @@ export function ProductFilters({
     filters.maxPrice ||
     filters.minRating ||
     filters.discount ||
-    filters.inStock;
+    filters.inStock ||
+    filters.gender ||
+    filters.color;
 
   const toggleBrand = (brand: string) => {
     const next = filters.brands.includes(brand)
@@ -83,15 +108,15 @@ export function ProductFilters({
   };
 
   return (
-    <aside className={`bg-white border border-gray-200 rounded-lg ${className}`}>
+    <aside className={`bg-white border border-gray-200 rounded-lg flex flex-col ${className}`}>
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-        <h2 className="font-bold text-sm text-gray-800">Filters</h2>
+        <h2 className="font-bold text-sm text-gray-800 tracking-wide">FILTERS</h2>
         <div className="flex items-center gap-3">
           {hasActive && (
             <button
               type="button"
               onClick={() => onChange(emptyFilters())}
-              className="text-xs text-[#5c59e8] font-semibold hover:underline"
+              className="text-xs text-primary font-semibold hover:underline"
             >
               Clear All
             </button>
@@ -104,17 +129,17 @@ export function ProductFilters({
         </div>
       </div>
 
-      <div className="px-4 pb-4 max-h-[calc(100vh-180px)] overflow-y-auto">
+      <div className="px-4 pb-4 max-h-[calc(100vh-180px)] overflow-y-auto flex-1">
         {subcategories.length > 0 && (
-          <Section title="CATEGORIES">
+          <Section title="CATEGORY">
             <div className="space-y-1.5">
               {subcategories.map((c) => (
                 <button
                   key={c.slug}
                   type="button"
                   onClick={() => onCategorySelect?.(c.slug)}
-                  className={`block w-full text-left text-sm py-1 hover:text-[#5c59e8] ${
-                    activeCategory === c.slug ? "text-[#5c59e8] font-semibold" : "text-gray-600"
+                  className={`block w-full text-left text-sm py-1 hover:text-primary ${
+                    activeCategory === c.slug ? "text-primary font-semibold" : "text-gray-600"
                   }`}
                 >
                   {c.name}
@@ -123,6 +148,50 @@ export function ProductFilters({
             </div>
           </Section>
         )}
+
+        <Section title="GENDER">
+          <div className="space-y-2">
+            {genders.map((g) => (
+              <label key={g} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="radio"
+                  name="gender"
+                  checked={filters.gender === g}
+                  onChange={() => onChange({ ...filters, gender: g })}
+                  className="text-primary focus:ring-primary"
+                />
+                {g}
+              </label>
+            ))}
+            {filters.gender ? (
+              <button
+                type="button"
+                onClick={() => onChange({ ...filters, gender: "" })}
+                className="text-xs text-primary hover:underline"
+              >
+                Clear gender
+              </button>
+            ) : null}
+          </div>
+        </Section>
+
+        <Section title="COLOR">
+          <div className="grid grid-cols-2 gap-2">
+            {colors.map((c) => (
+              <label key={c} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filters.color === c}
+                  onChange={() =>
+                    onChange({ ...filters, color: filters.color === c ? "" : c })
+                  }
+                  className="rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                {c}
+              </label>
+            ))}
+          </div>
+        </Section>
 
         <Section title="PRICE">
           <div className="flex items-center gap-2">
@@ -157,8 +226,8 @@ export function ProductFilters({
                 onClick={() => onChange({ ...filters, minPrice: r.min, maxPrice: r.max })}
                 className={`text-[11px] px-2 py-1 rounded-full border ${
                   filters.minPrice === r.min && filters.maxPrice === r.max
-                    ? "bg-[#5c59e8] text-white border-[#5c59e8]"
-                    : "border-gray-200 text-gray-600 hover:border-[#5c59e8]"
+                    ? "bg-primary text-white border-primary"
+                    : "border-gray-200 text-gray-600 hover:border-primary"
                 }`}
               >
                 {r.label}
@@ -176,7 +245,7 @@ export function ProductFilters({
                     type="checkbox"
                     checked={filters.brands.includes(brand)}
                     onChange={() => toggleBrand(brand)}
-                    className="rounded border-gray-300 text-[#5c59e8] focus:ring-[#5c59e8]"
+                    className="rounded border-gray-300 text-primary focus:ring-primary"
                   />
                   {brand}
                 </label>
@@ -197,7 +266,7 @@ export function ProductFilters({
                 name="rating"
                 checked={filters.minRating === r.value}
                 onChange={() => onChange({ ...filters, minRating: r.value })}
-                className="text-[#5c59e8] focus:ring-[#5c59e8]"
+                className="text-primary focus:ring-primary"
               />
               {r.label}
             </label>
@@ -206,7 +275,7 @@ export function ProductFilters({
             <button
               type="button"
               onClick={() => onChange({ ...filters, minRating: "" })}
-              className="text-xs text-[#5c59e8] hover:underline"
+              className="text-xs text-primary hover:underline"
             >
               Clear rating
             </button>
@@ -227,7 +296,7 @@ export function ProductFilters({
                 name="discount"
                 checked={filters.discount === d.value}
                 onChange={() => onChange({ ...filters, discount: d.value })}
-                className="text-[#5c59e8] focus:ring-[#5c59e8]"
+                className="text-primary focus:ring-primary"
               />
               {d.label}
             </label>
@@ -236,7 +305,7 @@ export function ProductFilters({
             <button
               type="button"
               onClick={() => onChange({ ...filters, discount: "" })}
-              className="text-xs text-[#5c59e8] hover:underline"
+              className="text-xs text-primary hover:underline"
             >
               Clear discount
             </button>
@@ -249,12 +318,25 @@ export function ProductFilters({
               type="checkbox"
               checked={filters.inStock}
               onChange={(e) => onChange({ ...filters, inStock: e.target.checked })}
-              className="rounded border-gray-300 text-[#5c59e8] focus:ring-[#5c59e8]"
+              className="rounded border-gray-300 text-primary focus:ring-primary"
             />
             In Stock Only
           </label>
         </Section>
       </div>
+
+      {onCloseMobile ? (
+        <div className="border-t border-gray-100 px-4 py-3 flex items-center justify-between gap-3 lg:hidden">
+          <p className="text-xs text-muted">{total != null ? `${total}+ Products` : "Products"}</p>
+          <button
+            type="button"
+            onClick={onCloseMobile}
+            className="bg-primary text-white text-sm font-bold px-6 py-2.5 rounded-lg"
+          >
+            Done
+          </button>
+        </div>
+      ) : null}
     </aside>
   );
 }

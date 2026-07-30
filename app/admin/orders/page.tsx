@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { formatPrice } from "@/lib/utils";
+import { notify } from "@/lib/notify";
 
 const STATUSES = [
   "PENDING",
@@ -66,7 +67,7 @@ export default function AdminOrdersPage() {
     const data = await res.json();
     setBusyId(null);
     if (!res.ok) {
-      alert(data.error || "Update failed");
+      notify.error(data.error || "Update failed");
       return;
     }
     void load();

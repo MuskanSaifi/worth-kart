@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   Plus,
   Trash2,
@@ -10,15 +10,23 @@ import {
   FolderOpen,
   Tag,
   X,
+  ImageIcon,
+  Upload,
+  Pencil,
 } from "lucide-react";
+import Image from "next/image";
 import { buildBreadcrumb } from "@/lib/categories";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { useConfirm } from "@/components/providers/ConfirmProvider";
+import { notify } from "@/lib/notify";
 
 interface CategoryRow {
   id: string;
   name: string;
   slug: string;
   keywords: string | null;
+  image: string | null;
+  imagePublicId: string | null;
   parentId: string | null;
   isActive: boolean;
   parent?: { name: string } | null;
@@ -44,6 +52,116 @@ function hierarchicalOptions(categories: CategoryRow[], parentId: string | null,
   return rows;
 }
 
+// ── Image Upload / Remove Modal ─────────────────────────────────────────────
+function ImageModal({
+  category,
+  onClose,
+  onUpdated,
+}: {
+  category: CategoryRow;
+  onClose: () => void;
+  onUpdated: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | null>(category.image);
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const pickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setFile(f);
+    setPreview(URL.createObjectURL(f));
+  };
+
+  const upload = async () => {
+    if (!file) return;
+    setUploading(true);
+    const fd = new FormData();
+    fd.append("image", file);
+    const res = await fetch(`/api/admin/categories/${category.id}/image`, { method: "POST", body: fd });
+    setUploading(false);
+    if (res.ok) {
+      notify.success("Image uploaded!");
+      onUpdated();
+      onClose();
+    } else {
+      const d = await res.json();
+      notify.error(d.error || "Upload failed");
+    }
+  };
+
+  const remove = async () => {
+    setUploading(true);
+    const res = await fetch(`/api/admin/categories/${category.id}/image`, { method: "DELETE" });
+    setUploading(false);
+    if (res.ok) {
+      notify.success("Image removed from Cloudinary");
+      onUpdated();
+      onClose();
+    } else {
+      notify.error("Remove failed");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-lg">Category Image — {category.name}</h3>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Preview */}
+        <div className="w-full aspect-video bg-gray-100 rounded-xl overflow-hidden flex items-center justify-center mb-4 border border-border">
+          {preview ? (
+            <Image src={preview} alt={category.name} width={400} height={225} className="object-cover w-full h-full" unoptimized />
+          ) : (
+            <div className="flex flex-col items-center gap-2 text-muted">
+              <ImageIcon size={36} />
+              <span className="text-sm">No image set</span>
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex flex-col gap-3">
+          <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={pickFile} />
+          <button
+            onClick={() => inputRef.current?.click()}
+            className="flex items-center justify-center gap-2 border-2 border-dashed border-primary/40 rounded-xl py-3 text-primary font-semibold text-sm hover:border-primary hover:bg-primary/5 transition"
+          >
+            <Upload size={16} /> {preview && !file ? "Change Image" : "Select Image"}
+          </button>
+
+          {file && (
+            <button
+              onClick={upload}
+              disabled={uploading}
+              className="bg-primary text-white rounded-xl py-3 font-semibold text-sm disabled:opacity-50"
+            >
+              {uploading ? "Uploading…" : "Upload to Cloudinary"}
+            </button>
+          )}
+
+          {category.image && !file && (
+            <button
+              onClick={remove}
+              disabled={uploading}
+              className="flex items-center justify-center gap-2 border border-red-300 text-red-600 rounded-xl py-3 text-sm font-semibold hover:bg-red-50 disabled:opacity-50"
+            >
+              <Trash2 size={14} /> Remove Image (delete from Cloudinary)
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ────────────────────────────────────────────────────────────────
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [requests, setRequests] = useState<CategoryRequest[]>([]);
@@ -54,6 +172,8 @@ export default function AdminCategoriesPage() {
   const [inlineName, setInlineName] = useState("");
   const [inlineKeywords, setInlineKeywords] = useState("");
   const [syncing, setSyncing] = useState(false);
+  const [imageModalFor, setImageModalFor] = useState<CategoryRow | null>(null);
+  const confirm = useConfirm();
 
   const categoryMap = useMemo(
     () => new Map(categories.map((c) => [c.id, { id: c.id, name: c.name, parentId: c.parentId }])),
@@ -64,7 +184,8 @@ export default function AdminCategoriesPage() {
     const roots = categories.filter((c) => !c.parentId).length;
     const leaves = categories.filter((c) => c._count.children === 0).length;
     const withProducts = categories.filter((c) => c._count.products > 0).length;
-    return { total: categories.length, roots, leaves, withProducts };
+    const withImages = categories.filter((c) => c.image).length;
+    return { total: categories.length, roots, leaves, withProducts, withImages };
   }, [categories]);
 
   const parentOptions = useMemo(() => hierarchicalOptions(categories, null), [categories]);
@@ -86,9 +207,7 @@ export default function AdminCategoriesPage() {
       .then((d) => setRequests(d.requests || []));
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
   const createCategory = async (name: string, parentId: string | null, keywords?: string) => {
     const res = await fetch("/api/admin/categories", {
@@ -143,10 +262,20 @@ export default function AdminCategoriesPage() {
   };
 
   const deleteCat = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"? Only empty categories (no children, no products) can be deleted.`)) return;
+    const ok = await confirm(
+      `Delete "${name}"? Only empty categories (no children, no products) can be deleted.`,
+      { title: "Delete category", confirmLabel: "Delete", destructive: true }
+    );
+    if (!ok) return;
     const res = await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
     const data = await res.json();
-    setMsg(res.ok ? "Deleted" : data.error);
+    if (res.ok) {
+      setMsg("Deleted");
+      notify.success("Category deleted");
+    } else {
+      setMsg(data.error);
+      notify.error(data.error || "Delete failed");
+    }
     load();
   };
 
@@ -160,11 +289,21 @@ export default function AdminCategoriesPage() {
   };
 
   const syncFromSeed = async () => {
-    if (!confirm("Sync all categories from seed file? Existing categories will be updated (not deleted).")) return;
+    const ok = await confirm(
+      "Sync all categories from seed file? Existing categories will be updated (not deleted).",
+      { title: "Sync categories", confirmLabel: "Sync" }
+    );
+    if (!ok) return;
     setSyncing(true);
     const res = await fetch("/api/admin/categories/sync-seed", { method: "POST" });
     const data = await res.json();
-    setMsg(res.ok ? data.message : data.error);
+    if (res.ok) {
+      setMsg(data.message);
+      notify.success(data.message || "Categories synced");
+    } else {
+      setMsg(data.error);
+      notify.error(data.error || "Sync failed");
+    }
     setSyncing(false);
     if (res.ok) load();
   };
@@ -202,7 +341,17 @@ export default function AdminCategoriesPage() {
                 )}
               </button>
 
-              {hasChildren ? (
+              {/* Category image thumbnail */}
+              {c.image ? (
+                <Image
+                  src={c.image}
+                  alt={c.name}
+                  width={28}
+                  height={28}
+                  className="w-7 h-7 rounded-md object-cover shrink-0 border border-border"
+                  unoptimized
+                />
+              ) : hasChildren ? (
                 isExpanded ? (
                   <FolderOpen size={16} className="text-amber-500 shrink-0" />
                 ) : (
@@ -227,6 +376,11 @@ export default function AdminCategoriesPage() {
                       {c._count.children} sub
                     </span>
                   )}
+                  {c.image && (
+                    <span className="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded">
+                      📷 img
+                    </span>
+                  )}
                 </div>
                 <p className="text-[11px] text-muted truncate" title={path.join(" → ")}>
                   {path.join(" → ")}
@@ -234,6 +388,16 @@ export default function AdminCategoriesPage() {
               </div>
 
               <span className="text-xs text-gray-400 whitespace-nowrap">{c._count.products} products</span>
+
+              {/* Image button */}
+              <button
+                type="button"
+                onClick={() => setImageModalFor(c)}
+                className="text-xs text-purple-600 flex items-center gap-0.5 opacity-70 group-hover:opacity-100 hover:underline"
+                title="Add/edit image"
+              >
+                <Pencil size={11} /> {c.image ? "Img" : "Add Img"}
+              </button>
 
               <button
                 type="button"
@@ -314,6 +478,13 @@ export default function AdminCategoriesPage() {
       title="Manage Categories"
       description="Unlimited nesting — products attach to leaf categories only."
     >
+      {imageModalFor && (
+        <ImageModal
+          category={imageModalFor}
+          onClose={() => setImageModalFor(null)}
+          onUpdated={load}
+        />
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted">
@@ -329,12 +500,13 @@ export default function AdminCategoriesPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {[
           { label: "Total categories", value: stats.total },
           { label: "Root categories", value: stats.roots },
           { label: "Leaf (product) nodes", value: stats.leaves },
           { label: "With products", value: stats.withProducts },
+          { label: "With images", value: stats.withImages },
         ].map((s) => (
           <div key={s.label} className="bg-card border border-border rounded-lg p-3 text-center">
             <p className="text-xl font-bold text-primary">{s.value}</p>
@@ -444,7 +616,8 @@ export default function AdminCategoriesPage() {
         <p className="text-xs text-muted mt-3 flex flex-wrap gap-x-4 gap-y-1">
           <span>📁 = has subcategories</span>
           <span>🏷️ green tag = leaf (sellers list products here)</span>
-          <span>Path shown under each name</span>
+          <span>📷 = has image</span>
+          <span>Click <strong>Add Img / Img</strong> on any row to upload category image</span>
         </p>
       </div>
     </AdminShell>

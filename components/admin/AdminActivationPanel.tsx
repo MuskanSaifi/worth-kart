@@ -116,7 +116,7 @@ export function AdminActivationPanel() {
       )}
 
       <p className="text-xs text-muted">
-        Sellers can also email <strong>support@worthkart.com</strong> for manual activation.
+        Sellers can also email <strong>support@worthkart.in</strong> for manual activation.
       </p>
     </div>
   );
