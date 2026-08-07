@@ -8,7 +8,7 @@ const MIN_NAME_MATCH = 60;
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { seller } = await getSellerProfile();
+    const { seller } = await getSellerProfile(req);
     const parsed = sellerBankDetailsSchema.safeParse(await req.json());
 
     if (!parsed.success) {

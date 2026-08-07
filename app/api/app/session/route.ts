@@ -16,7 +16,11 @@ export async function POST(req: NextRequest) {
     }
 
     const user = await getOrCreateBuyerByPhone(phone);
-    const token = createAppSessionToken({ id: user.id, phone: user.phone });
+    const token = createAppSessionToken({
+      id: user.id,
+      phone: user.phone,
+      role: user.role === "ADMIN" ? "ADMIN" : user.role === "SELLER" ? "SELLER" : "BUYER",
+    });
 
     return NextResponse.json({
       token,

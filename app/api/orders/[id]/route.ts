@@ -8,6 +8,8 @@ import {
   verifyDeliveryOtp,
 } from "@/lib/order-lifecycle";
 import { canDownloadOrderInvoice } from "@/lib/tax-invoice";
+import { cancelBuyerOrder } from "@/lib/order-cancel";
+import { REFUND_ETA_COPY } from "@/lib/order-refund";
 
 export async function GET(
   _req: NextRequest,
@@ -41,8 +43,11 @@ export async function GET(
         deliveryOtpPending: !!(
           order.status === "OUT_FOR_DELIVERY" && order.deliveryOtpHash
         ),
-        // Never expose hash
         deliveryOtpHash: undefined,
+        refundEtaCopy:
+          order.paymentStatus === "REFUNDED" || order.refundId
+            ? REFUND_ETA_COPY
+            : null,
       },
       actions: {
         canCancel: canBuyerCancel(order.status),
@@ -66,51 +71,31 @@ export async function PATCH(
     const body = await req.json();
     const action = body.action as string;
 
+    if (action === "cancel") {
+      try {
+        const result = await cancelBuyerOrder({
+          orderId: id,
+          userId: session.user.id,
+          reason:
+            typeof body.reason === "string" ? body.reason : "Cancelled by customer",
+        });
+        return NextResponse.json(result);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "Cancel failed";
+        const status =
+          typeof e === "object" && e && "status" in e
+            ? Number((e as { status: number }).status)
+            : 500;
+        return NextResponse.json({ error: message }, { status: status || 500 });
+      }
+    }
+
     const order = await prisma.order.findFirst({
       where: { id, userId: session.user.id },
       include: { items: true },
     });
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
-    }
-
-    if (action === "cancel") {
-      if (!canBuyerCancel(order.status)) {
-        return NextResponse.json(
-          { error: "This order can no longer be cancelled" },
-          { status: 400 }
-        );
-      }
-
-      // Restock if already confirmed (stock was decremented)
-      if (order.status !== "PENDING") {
-        for (const item of order.items) {
-          await prisma.product.update({
-            where: { id: item.productId },
-            data: { stock: { increment: item.quantity } },
-          });
-        }
-      }
-
-      const paymentStatus =
-        order.paymentStatus === "PAID" ? "REFUNDED" : order.paymentStatus === "PENDING" ? "FAILED" : order.paymentStatus;
-
-      await prisma.order.update({
-        where: { id },
-        data: { paymentStatus },
-      });
-
-      await transitionOrderStatus({
-        orderId: id,
-        status: "CANCELLED",
-        source: "buyer",
-        allowTerminal: true,
-        cancelReason: typeof body.reason === "string" ? body.reason : "Cancelled by customer",
-        title: "Order cancelled",
-        message: typeof body.reason === "string" ? body.reason : "Cancelled by customer",
-      });
-
-      return NextResponse.json({ success: true, status: "CANCELLED" });
     }
 
     if (action === "confirm_delivery") {
@@ -123,7 +108,10 @@ export async function PATCH(
       }
       const ok = await verifyDeliveryOtp(id, otp);
       if (!ok) {
-        return NextResponse.json({ error: "Invalid or expired delivery OTP" }, { status: 400 });
+        return NextResponse.json(
+          { error: "Invalid or expired delivery OTP" },
+          { status: 400 }
+        );
       }
 
       await transitionOrderStatus({

@@ -74,7 +74,7 @@ export default function CheckoutPage() {
   const { items, total, refresh } = useCart();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddress, setSelectedAddress] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("COD");
+  const [paymentMethod, setPaymentMethod] = useState("ONLINE");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showAddressForm, setShowAddressForm] = useState(false);
@@ -390,11 +390,15 @@ export default function CheckoutPage() {
             <h2 className="font-semibold mb-4">Payment Method</h2>
             <div className="space-y-2">
               {[
-                { id: "COD", label: "Cash on Delivery", hint: "Pay when your order arrives" },
                 {
                   id: "ONLINE",
                   label: "Pay Online",
-                  hint: "UPI, Cards, Net Banking via Cashfree",
+                  hint: "Secure pay to WorthKart · UPI / Card / NetBanking (Cashfree)",
+                },
+                {
+                  id: "COD",
+                  label: "Cash on Delivery",
+                  hint: "Pay cash to courier when order arrives",
                 },
               ].map((method) => (
                 <label

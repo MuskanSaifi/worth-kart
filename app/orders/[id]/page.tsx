@@ -34,6 +34,11 @@ interface OrderDetail {
   deliveredAt?: string | null;
   cancelReason?: string | null;
   deliveryOtpPending?: boolean;
+  refundId?: string | null;
+  refundStatus?: string | null;
+  refundAmount?: number | null;
+  refundedAt?: string | null;
+  refundEtaCopy?: string | null;
   address: {
     name: string;
     phone: string;
@@ -99,11 +104,16 @@ export default function OrderDetailPage() {
   }, [id]);
 
   async function cancelOrder() {
-    const ok = await confirm("Cancel this order?", {
-      title: "Cancel order",
-      confirmLabel: "Cancel order",
-      destructive: true,
-    });
+    const ok = await confirm(
+      order.paymentMethod !== "COD" && order.paymentStatus === "PAID"
+        ? "Cancel this order? Refund will go to your original payment method (UPI 1–3 days, card/netbanking 3–5 days)."
+        : "Cancel this order?",
+      {
+        title: "Cancel order",
+        confirmLabel: "Cancel order",
+        destructive: true,
+      }
+    );
     if (!ok) return;
     setBusy("cancel");
     const res = await fetch(`/api/orders/${id}`, {
@@ -118,8 +128,13 @@ export default function OrderDetailPage() {
       setMsg(err);
       notify.error(err);
     } else {
-      setMsg("Order cancelled.");
-      notify.success("Order cancelled");
+      const okMsg =
+        d.refundMessage ||
+        (d.refund?.refunded
+          ? "Order cancelled. Refund initiated to your original payment method."
+          : "Order cancelled.");
+      setMsg(okMsg);
+      notify.success(okMsg);
       await load();
     }
   }
@@ -283,6 +298,35 @@ export default function OrderDetailPage() {
                 Live timeline
               </p>
               <OrderTrackingTimeline events={order.events} />
+            </div>
+          )}
+
+          {(order.paymentStatus === "REFUNDED" || order.refundId) && (
+            <div className="mt-4 p-3 rounded-lg border border-emerald-200 bg-emerald-50 text-sm text-emerald-900">
+              <p className="font-semibold">
+                {order.refundStatus === "SUCCESS"
+                  ? "Refund completed"
+                  : order.refundStatus === "FAILED"
+                    ? "Refund needs attention"
+                    : "Refund initiated"}
+              </p>
+              {order.refundAmount != null && (
+                <p className="text-sm font-semibold mt-1">
+                  Amount: {formatPrice(order.refundAmount)}
+                </p>
+              )}
+              <p className="text-xs mt-2 text-emerald-800/90">
+                Online payment cancel/return ke baad refund original payment method pe jata hai:
+              </p>
+              <ul className="mt-1.5 text-xs text-emerald-900 space-y-1 list-disc pl-4">
+                <li>Debit / Credit Card — usually 3–5 business days</li>
+                <li>Net Banking — usually 3–5 business days</li>
+                <li>UPI — usually 1–3 business days</li>
+              </ul>
+              <p className="text-[11px] mt-2 text-amber-800 font-medium">
+                Important: WorthKart refund initiate ke baad bank/UPI provider ko credit mein extra
+                time lag sakta hai.
+              </p>
             </div>
           )}
 

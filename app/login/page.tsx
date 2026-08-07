@@ -124,6 +124,14 @@ function LoginForm() {
               Create an account
             </Link>
           </div>
+          <p className="mt-3 text-center text-xs text-muted">
+            Same mobile works for shopping. Sellers can also open Seller Hub separately.
+          </p>
+          <div className="mt-2 text-center text-sm">
+            <Link href="/seller/login" className="text-primary font-semibold hover:underline">
+              Seller Login →
+            </Link>
+          </div>
         </div>
       </div>
 

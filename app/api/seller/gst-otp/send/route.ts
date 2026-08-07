@@ -11,7 +11,7 @@ const schema = z.object({ gstin: z.string().min(15).max(15) });
 
 export async function POST(req: NextRequest) {
   try {
-    const { seller } = await getSellerProfile();
+    const { seller } = await getSellerProfile(req);
 
     if (seller.status === "BLOCKED") {
       return NextResponse.json({

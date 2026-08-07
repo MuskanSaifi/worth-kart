@@ -13,6 +13,7 @@ import {
   ImageIcon,
   ScrollText,
   Search,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,7 @@ const navItems = [
   { href: "/admin/pages", label: "Footer Pages", icon: ScrollText },
   { href: "/admin/seo-footer", label: "SEO Content", icon: Search },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
+  { href: "/admin/payouts", label: "Seller Payouts", icon: Wallet },
   { href: "/admin/sellers", label: "Manage Sellers", icon: Users },
   { href: "/admin/categories", label: "Manage Categories", icon: FolderTree },
   { href: "/admin/blogs", label: "Manage Blogs", icon: FileText },

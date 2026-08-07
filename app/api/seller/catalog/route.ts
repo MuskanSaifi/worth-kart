@@ -8,7 +8,7 @@ function generateFileId() {
 
 export async function GET(req: NextRequest) {
   try {
-    const { seller } = await getSellerProfile();
+    const { seller } = await getSellerProfile(req);
     const status = req.nextUrl.searchParams.get("status") || "all";
 
     const where: Record<string, unknown> = { sellerId: seller.id };

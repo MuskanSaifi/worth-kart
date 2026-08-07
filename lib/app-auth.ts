@@ -2,9 +2,12 @@ import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
+export type AppRole = "BUYER" | "SELLER" | "ADMIN";
+
 type AppSessionPayload = {
   uid: string;
   phone: string;
+  role: AppRole;
   exp: number;
 };
 
@@ -32,12 +35,30 @@ export function normalizePhone(phone: string) {
 
 export async function getOrCreateBuyerByPhone(phone: string) {
   const normalized = normalizePhone(phone);
-  let user = await prisma.user.findUnique({ where: { phone: normalized } });
-  if (user) return user;
+
+  const existing = await prisma.user.findUnique({
+    where: { phone: normalized },
+    include: { cart: { select: { id: true } } },
+  });
+  if (existing) {
+    if (existing.role === "ADMIN") {
+      throw new Error("Admin accounts cannot use buyer shopping login");
+    }
+    const data: { phoneVerified?: boolean } = {};
+    if (!existing.phoneVerified) data.phoneVerified = true;
+    if (Object.keys(data).length) {
+      await prisma.user.update({ where: { id: existing.id }, data });
+    }
+    // Sellers may not have a cart yet — create for shopping
+    if (!existing.cart) {
+      await prisma.cart.create({ data: { userId: existing.id } }).catch(() => null);
+    }
+    return existing;
+  }
 
   const internalEmail = `buyer-${normalized}@users.worthkart.in`;
   const hashed = await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 12);
-  user = await prisma.user.create({
+  return prisma.user.create({
     data: {
       email: internalEmail,
       phone: normalized,
@@ -48,14 +69,23 @@ export async function getOrCreateBuyerByPhone(phone: string) {
       cart: { create: {} },
     },
   });
-  return user;
 }
 
-export function createAppSessionToken(user: { id: string; phone: string | null }) {
-  if (!user.phone) throw new Error("User phone is required");
+export function createAppSessionToken(user: {
+  id: string;
+  phone: string | null;
+  role?: AppRole;
+}) {
+  const role = user.role || "BUYER";
+  const phone = user.phone ? normalizePhone(user.phone) : "";
+  if ((role === "BUYER" || role === "SELLER") && !phone) {
+    throw new Error("User phone is required");
+  }
+
   const payload: AppSessionPayload = {
     uid: user.id,
-    phone: normalizePhone(user.phone),
+    phone,
+    role,
     exp: Date.now() + 30 * 24 * 60 * 60 * 1000,
   };
   const payloadB64 = toBase64Url(JSON.stringify(payload));
@@ -70,24 +100,58 @@ export function verifyAppSessionToken(token: string): AppSessionPayload | null {
   if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
 
   try {
-    const payload = JSON.parse(fromBase64Url(payloadB64)) as AppSessionPayload;
-    if (!payload.uid || !payload.phone || !payload.exp) return null;
-    if (payload.exp < Date.now()) return null;
-    return payload;
+    const raw = JSON.parse(fromBase64Url(payloadB64)) as Partial<AppSessionPayload>;
+    if (!raw.uid || !raw.exp) return null;
+    if (raw.exp < Date.now()) return null;
+    return {
+      uid: raw.uid,
+      phone: raw.phone || "",
+      role: (raw.role as AppRole) || "BUYER",
+      exp: raw.exp,
+    };
   } catch {
     return null;
   }
 }
 
-export async function requireAppUser(req: Request) {
+function bearerToken(req: Request) {
   const authHeader = req.headers.get("authorization") || "";
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+  return authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+}
+
+export async function requireAppUser(req: Request) {
+  const token = bearerToken(req);
+  if (!token) throw new Error("Unauthorized");
+
   const payload = verifyAppSessionToken(token);
   if (!payload) throw new Error("Unauthorized");
 
-  const user = await prisma.user.findFirst({
-    where: { id: payload.uid, phone: payload.phone, role: "BUYER" },
-  });
+  const user = await prisma.user.findUnique({ where: { id: payload.uid } });
   if (!user) throw new Error("Unauthorized");
+
+  if (payload.phone) {
+    if (!user.phone || normalizePhone(user.phone) !== normalizePhone(payload.phone)) {
+      throw new Error("Unauthorized");
+    }
+  }
+
+  return user;
+}
+
+/** Seller / admin session for mobile Seller Hub */
+export async function requireAppSeller(req: Request) {
+  const token = bearerToken(req);
+  if (!token) throw new Error("Unauthorized");
+
+  const payload = verifyAppSessionToken(token);
+  if (!payload) throw new Error("Unauthorized");
+  if (payload.role !== "SELLER" && payload.role !== "ADMIN") {
+    throw new Error("Unauthorized");
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: payload.uid } });
+  if (!user || (user.role !== "SELLER" && user.role !== "ADMIN")) {
+    throw new Error("Unauthorized");
+  }
   return user;
 }

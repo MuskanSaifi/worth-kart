@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { buyerLoginSchema, loginSchema } from "@/lib/validations";
+import { buyerLoginSchema, loginSchema, sellerLoginSchema } from "@/lib/validations";
 import { authConfig } from "@/lib/auth.config";
 import { isOtpVerifiedRecently } from "@/lib/otp-check";
 import type { Role } from "@/app/generated/prisma/client";
@@ -57,7 +57,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const parsed = buyerLoginSchema.safeParse(credentials);
           if (!parsed.success) return null;
           user = await prisma.user.findUnique({ where: { phone: parsed.data.phone } });
-          if (!user || user.role !== "BUYER") return null;
+          // Allow BUYER and SELLER to shop with the same mobile number
+          if (!user || user.role === "ADMIN") return null;
+          const phoneOk = await isOtpVerifiedRecently(
+            parsed.data.phone,
+            "phone",
+            LOGIN_OTP_WINDOW_MINUTES
+          );
+          if (!phoneOk) return null;
+        } else if (accountType === "seller") {
+          const parsed = sellerLoginSchema.safeParse(credentials);
+          if (!parsed.success) return null;
+          user = await prisma.user.findUnique({ where: { phone: parsed.data.phone } });
+          if (!user || user.role !== "SELLER") return null;
           const phoneOk = await isOtpVerifiedRecently(
             parsed.data.phone,
             "phone",
@@ -70,8 +82,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           user = await prisma.user.findUnique({
             where: { email: parsed.data.email.trim().toLowerCase() },
           });
-          const allowedRole = accountType === "admin" ? "ADMIN" : "SELLER";
-          if (!user || user.role !== allowedRole) return null;
+          if (!user || user.role !== "ADMIN") return null;
           const valid = await bcrypt.compare(parsed.data.password, user.password);
           if (!valid) return null;
 

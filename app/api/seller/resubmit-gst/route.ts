@@ -44,7 +44,7 @@ async function recordGstFailure(
 
 export async function POST(req: NextRequest) {
   try {
-    const { seller } = await getSellerProfile();
+    const { seller } = await getSellerProfile(req);
 
     if (seller.status === "BLOCKED") {
       return NextResponse.json({

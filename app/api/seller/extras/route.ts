@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSellerProfile } from "@/lib/seller";
+import { PLATFORM_COMMISSION_RATE } from "@/lib/seller-commission";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const { seller } = await getSellerProfile();
+    const { seller } = await getSellerProfile(req);
 
-    const [returns, claims, payments] = await Promise.all([
+    const [returns, claims, settlements, notices] = await Promise.all([
       prisma.returnRequest.findMany({
         where: { sellerId: seller.id },
         include: {
@@ -20,21 +21,86 @@ export async function GET() {
         where: { sellerId: seller.id },
         orderBy: { createdAt: "desc" },
       }),
-      prisma.orderItem.findMany({
-        where: { sellerId: seller.id, order: { paymentStatus: "PAID" } },
-        include: { order: true, product: true },
+      prisma.sellerSettlement.findMany({
+        where: { sellerId: seller.id },
+        orderBy: { availableAt: "desc" },
+        take: 50,
+      }),
+      prisma.sellerNotice.findMany({
+        where: { OR: [{ sellerId: seller.id }, { sellerId: null }] },
+        orderBy: { createdAt: "desc" },
+        take: 50,
       }),
     ]);
 
-    const totalEarnings = payments.reduce((s, i) => s + i.price * i.quantity * 0.9, 0);
-    const pendingPayout = payments
-      .filter((i) => i.order.status === "DELIVERED")
-      .reduce((s, i) => s + i.price * i.quantity * 0.9, 0);
+    const pendingPayout = settlements
+      .filter((s) => s.status === "PENDING")
+      .reduce((sum, s) => sum + s.netAmount, 0);
+    const paidOut = settlements
+      .filter((s) => s.status === "PAID")
+      .reduce((sum, s) => sum + s.netAmount, 0);
+    const totalEarnings = pendingPayout + paidOut;
+    const onHold = settlements
+      .filter((s) => s.status === "ON_HOLD")
+      .reduce((sum, s) => sum + s.netAmount, 0);
+
+    // Backward-compatible items shape for existing app/web UIs
+    const items = settlements
+      .filter((s) => s.status === "PENDING" || s.status === "PAID")
+      .slice(0, 30)
+      .map((s) => ({
+        id: s.id,
+        price: s.grossAmount / Math.max(s.quantity, 1),
+        quantity: s.quantity,
+        netAmount: s.netAmount,
+        grossAmount: s.grossAmount,
+        commissionAmount: s.commissionAmount,
+        settlementStatus: s.status,
+        product: { name: s.productName },
+        order: {
+          orderNumber: s.orderNumber,
+          paymentStatus: "PAID",
+          status: s.status === "PAID" ? "PAID_OUT" : "DELIVERED",
+        },
+      }));
 
     return NextResponse.json({
       returns,
       claims,
-      payments: { totalEarnings, pendingPayout, items: payments.slice(0, 20) },
+      notices,
+      profile: {
+        id: seller.id,
+        businessName: seller.businessName,
+        businessType: seller.businessType,
+        status: seller.status,
+        gstNumber: seller.gstNumber,
+        gstVerified: seller.gstVerified,
+        panNumber: seller.panNumber,
+        panVerified: seller.panVerified,
+        bankAccount: seller.bankAccount,
+        bankIfsc: seller.bankIfsc,
+        bankVerified: seller.bankVerified,
+        bankName: seller.bankName,
+        pickupAddress: seller.pickupAddress,
+        city: seller.city,
+        state: seller.state,
+        pincode: seller.pincode,
+        rating: seller.rating,
+        totalSales: seller.totalSales,
+      },
+      payments: {
+        totalEarnings,
+        pendingPayout,
+        paidOut,
+        onHold,
+        commissionRate: PLATFORM_COMMISSION_RATE,
+        commissionPercent: Math.round(PLATFORM_COMMISSION_RATE * 100),
+        payoutSchedule: "Every Wednesday · bank transfer after delivery",
+        flowHint:
+          "Customer pays WorthKart (Cashfree). After delivery, your share (after 10% commission) is added to Pending Payout.",
+        settlements,
+        items,
+      },
     });
   } catch {
     return NextResponse.json({ error: "Failed" }, { status: 500 });
@@ -43,7 +109,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { seller } = await getSellerProfile();
+    const { seller } = await getSellerProfile(req);
     const body = await req.json();
 
     if (body.type === "claim") {
@@ -65,7 +131,9 @@ export async function POST(req: NextRequest) {
       });
 
       if (body.status === "COMPLETED" || body.status === "APPROVED") {
-        const { transitionOrderStatus, recordOrderEvent } = await import("@/lib/order-lifecycle");
+        const { transitionOrderStatus, recordOrderEvent } = await import(
+          "@/lib/order-lifecycle"
+        );
         if (body.status === "COMPLETED") {
           await transitionOrderStatus({
             orderId: updated.orderItem.orderId,

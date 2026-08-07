@@ -5,7 +5,7 @@ import { categoryRequestSchema } from "@/lib/category-admin";
 
 export async function POST(req: NextRequest) {
   try {
-    const { seller } = await getSellerProfile();
+    const { seller } = await getSellerProfile(req);
     const parsed = categoryRequestSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });

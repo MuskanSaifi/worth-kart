@@ -44,22 +44,28 @@ export default function SellerRegisterPage() {
   const [devOtp, setDevOtp] = useState("");
   const [gstVerifying, setGstVerifying] = useState(false);
   const [gstMessage, setGstMessage] = useState("");
+  const [loginUrl, setLoginUrl] = useState("");
 
   const sendOtp = async (type: "email" | "phone") => {
     const target = type === "email" ? step1.email : step1.phone;
     if (!target) {
       setError(`Enter ${type} first`);
+      setLoginUrl("");
       return;
     }
     setError("");
+    setLoginUrl("");
     const res = await fetch("/api/otp/send", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ target, type }),
+      body: JSON.stringify({ target, type, purpose: "seller_register" }),
     });
     const data = await res.json();
     if (!res.ok) {
-      setError(data.error);
+      setError(data.error || "Could not send OTP");
+      if (data.code === "ALREADY_REGISTERED" && data.loginUrl) {
+        setLoginUrl(data.loginUrl);
+      }
       return;
     }
     if (data.devOtp) setDevOtp(data.devOtp);
@@ -69,6 +75,7 @@ export default function SellerRegisterPage() {
   const handleStep1 = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setLoginUrl("");
     setLoading(true);
 
     const res = await fetch("/api/seller/register", {
@@ -81,6 +88,9 @@ export default function SellerRegisterPage() {
 
     if (!res.ok) {
       setError(data.error);
+      if (/already registered/i.test(data.error || "")) {
+        setLoginUrl("/seller/login");
+      }
       return;
     }
     setUserId(data.userId);
@@ -164,7 +174,16 @@ export default function SellerRegisterPage() {
 
         <div className="bg-card rounded-xl shadow-lg border border-border p-6 md:p-8">
           {error && (
-            <div className="bg-red-50 text-danger text-sm p-3 rounded-lg mb-4">{error}</div>
+            <div className="bg-red-50 text-danger text-sm p-3 rounded-lg mb-4">
+              <p>{error}</p>
+              {loginUrl ? (
+                <p className="mt-2">
+                  <Link href={loginUrl} className="font-semibold text-primary underline underline-offset-2">
+                    Login as seller →
+                  </Link>
+                </p>
+              ) : null}
+            </div>
           )}
 
           {step === 1 ? (

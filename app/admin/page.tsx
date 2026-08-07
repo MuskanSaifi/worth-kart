@@ -53,6 +53,7 @@ export default async function AdminDashboardPage() {
           { title: "Footer Pages", desc: "Privacy, Terms, FAQ and other footer content", href: "/admin/pages" },
           { title: "SEO Content", desc: "Meesho-style About + keyword directory above footer", href: "/admin/seo-footer" },
           { title: "Manage Orders", desc: "Update statuses, track EDD and payment state", href: "/admin/orders" },
+          { title: "Seller Payouts", desc: "Mark weekly settlements Paid after bank transfer", href: "/admin/payouts" },
           { title: "Manage Sellers", desc: "Approve sellers, view verification and products", href: "/admin/sellers" },
           { title: "Manage Categories", desc: "Create unlimited category tree for products", href: "/admin/categories" },
           { title: "Manage Blogs", desc: "Create SEO blogs with hero image and rich content", href: "/admin/blogs" },

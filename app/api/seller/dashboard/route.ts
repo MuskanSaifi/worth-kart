@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSellerProfile, getAccountSetupSteps, getSetupProgress } from "@/lib/seller";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const { seller } = await getSellerProfile();
+    const { seller } = await getSellerProfile(req);
 
     const [
       pendingOrders,

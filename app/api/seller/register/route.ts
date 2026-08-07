@@ -19,33 +19,110 @@ export async function POST(req: NextRequest) {
       }
 
       const { email, phone, password } = parsed.data;
+      const normalizedEmail = email.trim().toLowerCase();
+      const normalizedPhone = phone.replace(/\D/g, "").slice(-10);
 
       const [emailOk, phoneOk] = await Promise.all([
-        isOtpVerifiedRecently(email, "email"),
-        isOtpVerifiedRecently(phone, "phone"),
+        isOtpVerifiedRecently(normalizedEmail, "email"),
+        isOtpVerifiedRecently(normalizedPhone, "phone"),
       ]);
       if (!emailOk) {
-        return NextResponse.json({ error: "Email OTP not verified. Please verify your email." }, { status: 400 });
+        return NextResponse.json(
+          { error: "Email OTP not verified. Please verify your email." },
+          { status: 400 }
+        );
       }
       if (!phoneOk) {
-        return NextResponse.json({ error: "Mobile OTP not verified. Please verify your phone." }, { status: 400 });
+        return NextResponse.json(
+          { error: "Mobile OTP not verified. Please verify your phone." },
+          { status: 400 }
+        );
       }
 
-      const existing = await prisma.user.findFirst({
-        where: { OR: [{ email }, { phone }] },
-      });
-      if (existing) {
+      const [byPhone, byEmail] = await Promise.all([
+        prisma.user.findUnique({
+          where: { phone: normalizedPhone },
+          include: { sellerProfile: { select: { id: true } } },
+        }),
+        prisma.user.findUnique({
+          where: { email: normalizedEmail },
+          include: { sellerProfile: { select: { id: true } } },
+        }),
+      ]);
+
+      // Same person already a completed seller
+      if (
+        (byPhone?.sellerProfile || byEmail?.sellerProfile) &&
+        (byPhone?.role === "SELLER" || byEmail?.role === "SELLER")
+      ) {
         return NextResponse.json(
-          { error: "Email or phone already registered" },
+          {
+            error: "Already registered as a seller. Please login.",
+            loginUrl: "/seller/login",
+          },
+          { status: 409 }
+        );
+      }
+
+      if (byPhone?.role === "ADMIN" || byEmail?.role === "ADMIN") {
+        return NextResponse.json(
+          {
+            error:
+              "This email/phone belongs to an admin account. Use different credentials.",
+          },
+          { status: 409 }
+        );
+      }
+
+      // Phone and email belong to two different users → conflict
+      if (byPhone && byEmail && byPhone.id !== byEmail.id) {
+        return NextResponse.json(
+          {
+            error:
+              "This email and mobile belong to different accounts. Use matching details, or a new email/phone pair.",
+          },
           { status: 409 }
         );
       }
 
       const hashed = await bcrypt.hash(password, 12);
+
+      // Upgrade BUYER / resume incomplete SELLER on same phone or email
+      const existing = byPhone || byEmail;
+      if (existing) {
+        if (existing.sellerProfile) {
+          return NextResponse.json(
+            {
+              error: "Already registered as a seller. Please login.",
+              loginUrl: "/seller/login",
+            },
+            { status: 409 }
+          );
+        }
+
+        const updated = await prisma.user.update({
+          where: { id: existing.id },
+          data: {
+            email: normalizedEmail,
+            phone: normalizedPhone,
+            password: hashed,
+            role: "SELLER",
+            emailVerified: true,
+            phoneVerified: true,
+          },
+        });
+
+        return NextResponse.json({
+          success: true,
+          userId: updated.id,
+          upgraded: existing.role === "BUYER",
+        });
+      }
+
       const user = await prisma.user.create({
         data: {
-          email,
-          phone,
+          email: normalizedEmail,
+          phone: normalizedPhone,
           password: hashed,
           role: "SELLER",
           emailVerified: true,
@@ -77,6 +154,26 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { sellerProfile: { select: { id: true } } },
+      });
+      if (!user || user.role !== "SELLER") {
+        return NextResponse.json(
+          { error: "Complete account step first" },
+          { status: 400 }
+        );
+      }
+      if (user.sellerProfile) {
+        return NextResponse.json(
+          {
+            error: "Seller profile already exists. Please login.",
+            loginUrl: "/seller/login",
+          },
+          { status: 409 }
+        );
+      }
+
       const profile = await prisma.sellerProfile.create({
         data: {
           userId,
@@ -100,7 +197,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ error: "Invalid step" }, { status: 400 });
-  } catch {
+  } catch (e) {
+    console.error("Seller registration failed:", e);
     return NextResponse.json({ error: "Seller registration failed" }, { status: 500 });
   }
 }

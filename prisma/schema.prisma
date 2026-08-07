@@ -112,6 +112,7 @@ model SellerProfile {
   returnRequests ReturnRequest[]
   categoryRequests CategoryRequest[]
   activationRequests SellerActivationRequest[]
+  settlements   SellerSettlement[]
 }
 
 enum ActivationRequestStatus {
@@ -129,6 +130,41 @@ model SellerActivationRequest {
   adminNote String?
   createdAt DateTime                @default(now())
   updatedAt DateTime                @updatedAt
+}
+
+/// Marketplace settlement line — created when order is DELIVERED (Flipkart/Meesho style).
+/// Money stays with platform (Cashfree merchant) until weekly bank payout.
+enum SettlementStatus {
+  PENDING
+  PAID
+  ON_HOLD
+  CANCELLED
+}
+
+model SellerSettlement {
+  id               String           @id @default(cuid()) @map("_id")
+  sellerId         String
+  seller           SellerProfile    @relation(fields: [sellerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  orderId          String
+  orderItemId      String           @unique
+  orderNumber      String
+  productName      String
+  quantity         Int
+  grossAmount      Float
+  commissionRate   Float
+  commissionAmount Float
+  netAmount        Float
+  paymentMethod    String
+  status           SettlementStatus @default(PENDING)
+  availableAt      DateTime
+  paidAt           DateTime?
+  payoutBatchId    String?
+  notes            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([sellerId, status])
+  @@index([orderId])
 }
 
 enum QcStatus {
@@ -267,6 +303,10 @@ model Order {
   paymentMethod        PaymentMethod @default(COD)
   paymentStatus        PaymentStatus @default(PENDING)
   gatewayPaymentId     String?
+  refundId             String?
+  refundStatus         String?       // PENDING | SUCCESS | FAILED | CANCELLED
+  refundAmount         Float?
+  refundedAt           DateTime?
   subtotal             Float
   discount             Float         @default(0)
   shipping             Float         @default(0)

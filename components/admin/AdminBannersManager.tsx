@@ -406,9 +406,11 @@ export function AdminBannersManager({ initialBanners }: { initialBanners: Banner
                     {appUploading ? <Loader2 size={14} className="animate-spin" /> : <Smartphone size={14} />}
                     {form.appImage ? "Change" : "Upload"} app image
                   </button>
-                  <p className="text-[11px] text-muted mt-1">Square/portrait · min 800×400px</p>
+                  <p className="text-[11px] text-muted mt-1">
+                    Exact size: <strong>1080 × 540 px</strong> (2:1 landscape)
+                  </p>
                   <p className="text-[11px] text-blue-600 mt-0.5">
-                    If not set, website image is used on app
+                    Same ratio = perfect fit, no crop / no side gaps. If empty, website image is used.
                   </p>
                 </div>
               </div>

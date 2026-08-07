@@ -10,7 +10,7 @@ const schema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const { seller } = await getSellerProfile();
+    const { seller } = await getSellerProfile(req);
 
     if (seller.status !== "BLOCKED") {
       return NextResponse.json({ error: "Account is not blocked" }, { status: 400 });
@@ -46,9 +46,9 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const { seller } = await getSellerProfile();
+    const { seller } = await getSellerProfile(req);
     const requests = await prisma.sellerActivationRequest.findMany({
       where: { sellerId: seller.id },
       orderBy: { createdAt: "desc" },

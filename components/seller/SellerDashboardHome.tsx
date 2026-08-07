@@ -39,11 +39,39 @@ export function SellerDashboardHome({ stats }: { stats: DashboardStats }) {
   return (
     <div className="space-y-5">
       {/* Welcome */}
-      <div>
-        <h1 className="text-xl font-semibold text-gray-800">
-          Welcome back, {stats.sellerName}
-        </h1>
-        <p className="text-sm text-gray-500 mt-0.5">Here&apos;s what&apos;s happening with {stats.businessName} today</p>
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-gray-800">
+            Welcome back, {stats.sellerName}
+          </h1>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Here&apos;s what&apos;s happening with {stats.businessName} today
+          </p>
+        </div>
+        <div className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-4 py-3 text-sm shadow-sm">
+          <p className="font-semibold">WorthKart Seller App</p>
+          <p className="text-white/85 text-xs mt-0.5">
+            Orders · stock · prices on mobile — open the app → Account → Seller Hub
+          </p>
+        </div>
+      </div>
+
+      {/* Quick actions */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {[
+          { href: "/seller/orders?status=pending", label: "Process orders" },
+          { href: "/seller/inventory", label: "Update stock" },
+          { href: "/seller/pricing", label: "Edit prices" },
+          { href: "/seller/products/new", label: "Add product" },
+        ].map((a) => (
+          <Link
+            key={a.href}
+            href={a.href}
+            className="text-center text-xs font-semibold bg-white border border-gray-200 rounded-lg py-2.5 hover:border-primary hover:text-primary transition-colors"
+          >
+            {a.label}
+          </Link>
+        ))}
       </div>
 
       {/* To Do List */}

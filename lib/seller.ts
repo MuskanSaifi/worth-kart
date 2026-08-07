@@ -1,10 +1,30 @@
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
+import { requireAppSeller } from "@/lib/app-auth";
 
-export async function getSellerProfile() {
-  const session = await requireRole("SELLER", "ADMIN");
+/**
+ * Resolve seller from NextAuth cookie (website) OR Bearer app token (mobile).
+ * Pass `req` from route handlers so the app can call the same /api/seller/* APIs.
+ */
+export async function getSellerProfile(req?: Request) {
+  let userId: string;
+  let session: { user: { id: string; role: string } };
+
+  const authHeader = req?.headers.get("authorization") || "";
+  const hasBearer = authHeader.startsWith("Bearer ");
+
+  if (req && hasBearer) {
+    const user = await requireAppSeller(req);
+    userId = user.id;
+    session = { user: { id: user.id, role: user.role } };
+  } else {
+    const nextSession = await requireRole("SELLER", "ADMIN");
+    userId = nextSession.user.id;
+    session = nextSession as { user: { id: string; role: string } };
+  }
+
   const seller = await prisma.sellerProfile.findUnique({
-    where: { userId: session.user.id },
+    where: { userId },
     include: { user: { select: { name: true, email: true, phone: true } } },
   });
   if (!seller) throw new Error("Seller profile not found");

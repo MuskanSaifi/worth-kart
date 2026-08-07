@@ -72,7 +72,7 @@ async function ensureShipmentForItem(
 
 export async function GET(req: NextRequest) {
   try {
-    const { seller } = await getSellerProfile();
+    const { seller } = await getSellerProfile(req);
     const status = req.nextUrl.searchParams.get("status");
 
     const where: Record<string, unknown> = { sellerId: seller.id };
@@ -99,7 +99,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { seller } = await getSellerProfile();
+    const { seller } = await getSellerProfile(req);
     const body = await req.json();
     const { orderItemId, action, status } = body as {
       orderItemId: string;

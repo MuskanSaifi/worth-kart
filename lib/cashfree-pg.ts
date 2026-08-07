@@ -92,3 +92,45 @@ export async function fetchCashfreePgOrder(
   if (!res.ok) return null;
   return (await res.json()) as CashfreePgOrderDetails;
 }
+
+export type CashfreeRefundResult = {
+  refund_id: string;
+  cf_refund_id?: string;
+  refund_status?: string;
+  refund_amount?: number;
+  status?: string;
+  message?: string;
+};
+
+/** Create refund against Cashfree order_id (our orderNumber). */
+export async function createCashfreeOrderRefund(params: {
+  orderId: string;
+  refundId: string;
+  amount: number;
+  note?: string;
+}): Promise<CashfreeRefundResult> {
+  const configError = getCashfreePgConfigError();
+  if (configError) throw new Error(configError);
+
+  const refundAmount = Math.round(params.amount * 100) / 100;
+  const res = await fetch(
+    `${cashfreePgBaseUrl()}/pg/orders/${encodeURIComponent(params.orderId)}/refunds`,
+    {
+      method: "POST",
+      headers: cashfreePgHeaders(),
+      body: JSON.stringify({
+        refund_amount: refundAmount,
+        refund_id: params.refundId,
+        refund_note: params.note || "Order cancelled — WorthKart refund",
+        refund_speed: "STANDARD",
+      }),
+      cache: "no-store",
+    }
+  );
+
+  const data = (await res.json()) as CashfreeRefundResult;
+  if (!res.ok) {
+    throw new Error(data.message || "Cashfree refund failed");
+  }
+  return data;
+}

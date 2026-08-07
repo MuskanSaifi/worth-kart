@@ -99,6 +99,18 @@ export async function transitionOrderStatus(opts: TransitionOpts) {
     );
   }
 
+  if (opts.status === "DELIVERED") {
+    void import("@/lib/seller-settlement")
+      .then(({ settleOrderOnDelivery }) => settleOrderOnDelivery(opts.orderId))
+      .catch((e) => console.warn("[transitionOrderStatus] settlement", e));
+  }
+
+  if (opts.status === "RETURNED") {
+    void import("@/lib/seller-settlement")
+      .then(({ cancelSettlementsOnReturn }) => cancelSettlementsOnReturn(opts.orderId))
+      .catch((e) => console.warn("[transitionOrderStatus] return settlement", e));
+  }
+
   return { order: updated, deliveryOtp, unchanged: false };
 }
 

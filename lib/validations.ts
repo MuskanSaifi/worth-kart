@@ -24,6 +24,7 @@ export const mobileSchema = z.object({
 
 export const buyerLoginSchema = mobileSchema;
 export const buyerRegisterSchema = mobileSchema;
+export const sellerLoginSchema = mobileSchema;
 
 export const registerSchema = z
   .object({
@@ -120,6 +121,8 @@ export const sellerBankDetailsSchema = z.object({
 export const otpSendSchema = z.object({
   target: z.string().min(1),
   type: z.enum(["email", "phone"]),
+  /** When set, block OTP if email/phone already exists (registration flows). */
+  purpose: z.enum(["seller_register", "buyer_register"]).optional(),
 });
 
 export const otpVerifySchema = z.object({

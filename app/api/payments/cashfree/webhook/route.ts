@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { fulfillPaidOrder } from "@/lib/order-fulfillment";
+import { applyRefundWebhookStatus } from "@/lib/order-refund";
 
 interface CashfreeWebhookPayload {
   type?: string;
@@ -12,6 +13,12 @@ interface CashfreeWebhookPayload {
     payment?: {
       cf_payment_id?: string;
       payment_status?: string;
+    };
+    refund?: {
+      refund_id?: string;
+      cf_refund_id?: string;
+      refund_status?: string;
+      refund_amount?: number;
     };
   };
 }
@@ -38,7 +45,7 @@ export async function POST(req: NextRequest) {
       paymentStatus === "SUCCESS" ||
       payload.type === "PAYMENT_SUCCESS_WEBHOOK";
 
-    if (isPaid && order.paymentStatus !== "PAID") {
+    if (isPaid && order.paymentStatus !== "PAID" && order.paymentStatus !== "REFUNDED") {
       await fulfillPaidOrder(
         order.id,
         payload.data?.payment?.cf_payment_id
@@ -52,6 +59,21 @@ export async function POST(req: NextRequest) {
       await prisma.order.update({
         where: { id: order.id },
         data: { paymentStatus: "FAILED", status: "CANCELLED" },
+      });
+    }
+
+    const refund = payload.data?.refund;
+    const isRefundEvent =
+      !!refund ||
+      payload.type?.toUpperCase().includes("REFUND") ||
+      false;
+
+    if (isRefundEvent && refund) {
+      await applyRefundWebhookStatus({
+        orderNumber,
+        refundId: refund.refund_id || refund.cf_refund_id,
+        refundStatus: refund.refund_status,
+        refundAmount: refund.refund_amount,
       });
     }
 

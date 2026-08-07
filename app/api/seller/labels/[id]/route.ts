@@ -3,11 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { getSellerProfile } from "@/lib/seller";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { seller } = await getSellerProfile();
+    const { seller } = await getSellerProfile(req);
     const { id } = await params;
 
     const item = await prisma.orderItem.findFirst({

@@ -13,7 +13,7 @@ const schema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const { seller } = await getSellerProfile();
+    const { seller } = await getSellerProfile(req);
 
     if (seller.status === "BLOCKED") {
       return NextResponse.json({ error: "Account blocked" }, { status: 403 });

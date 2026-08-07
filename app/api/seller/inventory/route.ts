@@ -4,7 +4,7 @@ import { getSellerProfile } from "@/lib/seller";
 
 export async function GET(req: NextRequest) {
   try {
-    const { seller } = await getSellerProfile();
+    const { seller } = await getSellerProfile(req);
     const filter = req.nextUrl.searchParams.get("filter");
 
     const where: Record<string, unknown> = { sellerId: seller.id, isActive: true };
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { seller } = await getSellerProfile();
+    const { seller } = await getSellerProfile(req);
     const { productId, stock, price, mrp } = await req.json();
 
     const product = await prisma.product.findFirst({
