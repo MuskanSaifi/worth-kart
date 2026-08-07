@@ -1,6 +1,9 @@
 import type { NextAuthConfig } from "next-auth";
 
 export const authConfig = {
+  // Behind nginx/Hostinger proxy (worthkart.in → :3002). Without this,
+  // Auth.js throws UntrustedHost and every page 500s.
+  trustHost: true,
   pages: {
     signIn: "/login",
   },

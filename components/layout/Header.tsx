@@ -8,7 +8,15 @@ import Image from "next/image";
 import { MapPin, Download, ChevronDown, HelpCircle, Package } from "lucide-react";
 
 export async function Header() {
-  const session = await auth();
+  let session: Awaited<ReturnType<typeof auth>> = null;
+  try {
+    session = await auth();
+  } catch (error) {
+    console.error(
+      "[Header] auth() failed (check AUTH_SECRET + NEXTAUTH_URL=https://worthkart.in):",
+      error instanceof Error ? error.message : error
+    );
+  }
 
   let topCategories: Awaited<ReturnType<typeof prisma.category.findMany>> = [];
   try {

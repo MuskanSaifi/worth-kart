@@ -26,13 +26,14 @@ export function HeaderClient({ session }: { session: Session | null }) {
   const menuRef = useRef<HTMLDivElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
 
-  const hideInternalEmail = isInternalBuyerEmail(session?.user.email);
+  const user = session?.user;
+  const hideInternalEmail = isInternalBuyerEmail(user?.email);
   const displayName =
-    session?.user.name?.trim() ||
-    session?.user.phone ||
-    (!hideInternalEmail ? session?.user.email?.split("@")[0] : null);
-  const welcomeLabel = session?.user.name?.trim()
-    ? `Welcome ${session.user.name.trim()}`
+    user?.name?.trim() ||
+    user?.phone ||
+    (!hideInternalEmail ? user?.email?.split("@")[0] : null);
+  const welcomeLabel = user?.name?.trim()
+    ? `Welcome ${user.name.trim()}`
     : displayName || "My Account";
 
   useEffect(() => {
@@ -47,7 +48,7 @@ export function HeaderClient({ session }: { session: Session | null }) {
 
   return (
     <div className="flex items-center gap-2 sm:gap-3 ml-auto shrink-0">
-      {session ? (
+      {user ? (
         <div className="relative" ref={menuRef}>
           <button
             type="button"
@@ -57,10 +58,10 @@ export function HeaderClient({ session }: { session: Session | null }) {
             }}
             className="flex items-center gap-2 text-white hover:text-accent transition-colors"
           >
-            {session.user.image ? (
+            {user.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={session.user.image}
+                src={user.image}
                 alt=""
                 className="w-7 h-7 rounded-full object-cover border border-white/40"
               />
@@ -78,7 +79,7 @@ export function HeaderClient({ session }: { session: Session | null }) {
               <div className="px-4 py-2 border-b border-border">
                 <p className="text-sm font-semibold text-foreground">Your Account</p>
                 <p className="text-xs text-muted truncate mt-0.5">
-                  {session.user.phone || (!hideInternalEmail ? session.user.email : "")}
+                  {user.phone || (!hideInternalEmail ? user.email : "")}
                 </p>
               </div>
 
@@ -111,7 +112,7 @@ export function HeaderClient({ session }: { session: Session | null }) {
                 <MapPin size={16} className="text-muted" /> Saved Addresses
               </Link>
 
-              {session.user.role === "SELLER" && (
+              {user.role === "SELLER" && (
                 <Link
                   href="/seller"
                   className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-purple-50"
@@ -120,7 +121,7 @@ export function HeaderClient({ session }: { session: Session | null }) {
                   <Store size={16} className="text-muted" /> Seller Dashboard
                 </Link>
               )}
-              {session.user.role === "ADMIN" && (
+              {user.role === "ADMIN" && (
                 <Link
                   href="/admin"
                   className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-purple-50"
@@ -151,7 +152,7 @@ export function HeaderClient({ session }: { session: Session | null }) {
       )}
 
       {/* Become a Seller — prominent, Flipkart-style */}
-      {(!session || session.user.role === "BUYER") && (
+      {(!user || user.role === "BUYER") && (
         <Link
           href="/seller/register"
           className="hidden md:inline-flex items-center gap-1.5 text-white text-sm font-medium hover:text-accent transition-colors px-2 py-1 rounded"
@@ -176,7 +177,7 @@ export function HeaderClient({ session }: { session: Session | null }) {
         </button>
         {moreOpen && (
           <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-xl border border-border py-2 z-50 animate-fade-in">
-            {(!session || session.user.role === "BUYER") && (
+            {(!user || user.role === "BUYER") && (
               <Link
                 href="/seller/register"
                 className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-purple-50 md:hidden"
