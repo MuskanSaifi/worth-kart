@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { buyerLoginSchema, loginSchema, sellerLoginSchema } from "@/lib/validations";
 import { authConfig } from "@/lib/auth.config";
 import { isOtpVerifiedRecently } from "@/lib/otp-check";
+import { getOrCreateBuyerByPhone, normalizePhone } from "@/lib/app-auth";
 import type { Role } from "@/app/generated/prisma/client";
 
 declare module "next-auth" {
@@ -56,15 +57,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (accountType === "buyer") {
           const parsed = buyerLoginSchema.safeParse(credentials);
           if (!parsed.success) return null;
-          user = await prisma.user.findUnique({ where: { phone: parsed.data.phone } });
-          // Allow BUYER and SELLER to shop with the same mobile number
-          if (!user || user.role === "ADMIN") return null;
+          const phone = normalizePhone(parsed.data.phone);
           const phoneOk = await isOtpVerifiedRecently(
-            parsed.data.phone,
+            phone,
             "phone",
             LOGIN_OTP_WINDOW_MINUTES
           );
           if (!phoneOk) return null;
+          // First OTP login creates buyer; profile details can be filled later
+          try {
+            user = await getOrCreateBuyerByPhone(phone);
+          } catch {
+            return null;
+          }
+          if (user.role === "ADMIN") return null;
         } else if (accountType === "seller") {
           const parsed = sellerLoginSchema.safeParse(credentials);
           if (!parsed.success) return null;

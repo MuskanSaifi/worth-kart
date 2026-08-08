@@ -25,13 +25,35 @@ function normalizeReturnUrl(
   orderNumber: string,
   publicOrigin: string
 ) {
-  // Cashfree needs a reachable http(s) URL — never exp:// or localhost for phone testing.
+  // Cashfree needs a reachable http(s) URL — never exp:// for phone testing.
   let base = returnUrl?.trim() || `${publicOrigin}/app-pay/return`;
-  if (/localhost|127\.0\.0\.1/i.test(base) || /^(exp|worthkart):\/\//i.test(base)) {
+  let appReturnParam = "";
+  try {
+    const parsed = new URL(base);
+    appReturnParam = parsed.searchParams.get("app_return") || "";
+  } catch {
+    /* keep base as-is */
+  }
+
+  if (/^(exp|worthkart):\/\//i.test(base)) {
+    base = `${publicOrigin}/app-pay/return`;
+  } else if (/localhost|127\.0\.0\.1/i.test(base)) {
+    // Keep using website origin for Cashfree return; preserve Expo app_return bounce URL
     base = `${publicOrigin}/app-pay/return`;
   }
-  const separator = base.includes("?") ? "&" : "?";
-  return `${base}${separator}order_id=${encodeURIComponent(orderNumber)}`;
+
+  try {
+    const url = new URL(base);
+    if (appReturnParam) url.searchParams.set("app_return", appReturnParam);
+    url.searchParams.set("order_id", orderNumber);
+    return url.toString();
+  } catch {
+    const separator = base.includes("?") ? "&" : "?";
+    const appPart = appReturnParam
+      ? `app_return=${encodeURIComponent(appReturnParam)}&`
+      : "";
+    return `${base}${separator}${appPart}order_id=${encodeURIComponent(orderNumber)}`;
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -207,6 +229,7 @@ export async function POST(req: NextRequest) {
 
     try {
       const publicOrigin = getRequestPublicOrigin(req);
+      const pgMode = cashfreePgMode() === "production" ? "production" : "sandbox";
       const pgOrder = await createCashfreePgOrder({
         orderId: order.orderNumber,
         amount: total,
@@ -218,16 +241,19 @@ export async function POST(req: NextRequest) {
         returnUrl: normalizeReturnUrl(body.returnUrl, order.orderNumber, publicOrigin),
       });
 
-      // Use Cashfree's hosted payment page directly — no JS SDK needed, works in any in-app browser
-      const cashfreeHostedBase =
-        cashfreePgMode() === "production"
-          ? "https://payments.cashfree.com/order"
-          : "https://payments-test.cashfree.com/order";
-      const paymentPageUrl = `${cashfreeHostedBase}/#session_id=${encodeURIComponent(pgOrder.payment_session_id)}`;
+      // Cashfree hosted "#session_id=" URL is unreliable (esp. Expo web popups).
+      // Open checkout via our Next.js bridge page + official JS SDK instead.
+      const paymentPageUrl =
+        `${publicOrigin}/app-pay` +
+        `?session_id=${encodeURIComponent(pgOrder.payment_session_id)}` +
+        `&mode=${encodeURIComponent(pgMode)}` +
+        `&order_id=${encodeURIComponent(order.orderNumber)}`;
+
       return NextResponse.json(
         {
           order,
           paymentSessionId: pgOrder.payment_session_id,
+          cashfreeMode: pgMode,
           paymentPageUrl,
         },
         { status: 201 }

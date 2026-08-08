@@ -73,9 +73,13 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         <div className="bg-card rounded-xl shadow-lg border border-border p-8">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold">Create Account</h1>
+            <h1 className="text-2xl font-bold">Buyer Login</h1>
             <p className="text-sm text-muted mt-1">
-              Register instantly using your mobile number
+              Prefer{" "}
+              <Link href="/login" className="text-primary font-semibold hover:underline">
+                Login with OTP
+              </Link>
+              {" "}— no separate signup. Profile details can be completed later.
             </p>
           </div>
 

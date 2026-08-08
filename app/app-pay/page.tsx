@@ -46,8 +46,10 @@ export default function AppPayPage() {
     let mounted = true;
     (async () => {
       try {
-        const Cashfree = await loadCashfreeSdk();
-        const cashfree = Cashfree({ mode });
+    const Cashfree = await loadCashfreeSdk();
+        const cashfree = Cashfree({
+          mode: mode === "production" ? "production" : "sandbox",
+        });
         const result = await cashfree.checkout({
           paymentSessionId,
           redirectTarget: "_self",

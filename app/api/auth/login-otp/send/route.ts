@@ -26,8 +26,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
       }
       const phone = parsed.data.phone.replace(/\D/g, "").slice(-10);
+      // Buyers do NOT need prior registration — OTP login creates account on session.
       const user = await prisma.user.findUnique({ where: { phone } });
-      // Same phone can shop as buyer even if role is SELLER (dual use)
       if (user?.role === "ADMIN") {
         return NextResponse.json(
           { error: "This number belongs to an admin account. Use admin login." },

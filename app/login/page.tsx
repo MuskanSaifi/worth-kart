@@ -119,10 +119,8 @@ function LoginForm() {
           </form>
 
           <div className="mt-6 text-center text-sm text-muted">
-            New to WorthKart?{" "}
-            <Link href="/register" className="text-primary font-semibold hover:underline">
-              Create an account
-            </Link>
+            No separate signup needed — mobile OTP creates your buyer account.
+            Complete name &amp; address anytime from Profile.
           </div>
           <p className="mt-3 text-center text-xs text-muted">
             Same mobile works for shopping. Sellers can also open Seller Hub separately.
