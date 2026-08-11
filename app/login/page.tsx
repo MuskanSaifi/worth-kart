@@ -53,6 +53,22 @@ function LoginForm() {
     setLoading(false);
 
     if (!res.ok) {
+      // App-compatible fallback if an older auth route still blocks new buyers
+      if (/not registered|create an account/i.test(String(data.error || ""))) {
+        const fallback = await fetch("/api/app/login-otp/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone }),
+        });
+        const fallbackData = await fallback.json();
+        if (!fallback.ok) {
+          setError(fallbackData.error || data.error || "Could not send OTP");
+          return;
+        }
+        setDevOtp(fallbackData.devOtp || "");
+        setOtpModal({ type: fallbackData.type || "phone", target: fallbackData.target || phone });
+        return;
+      }
       setError(data.error || "Could not send OTP");
       return;
     }

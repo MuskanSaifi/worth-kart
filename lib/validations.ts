@@ -128,7 +128,11 @@ export const otpSendSchema = z.object({
 export const otpVerifySchema = z.object({
   target: z.string().min(1),
   type: z.enum(["email", "phone"]),
-  code: z.string().regex(/^\d{4}$/, "OTP must be 4 digits"),
+  // 2Factor templates may send 4–6 digits
+  code: z
+    .string()
+    .transform((v) => v.replace(/\D/g, ""))
+    .refine((v) => /^\d{4,8}$/.test(v), "OTP must be 4–8 digits"),
 });
 
 export const uploadedImageSchema = z.object({

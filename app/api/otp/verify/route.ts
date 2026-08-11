@@ -18,6 +18,21 @@ export async function POST(req: NextRequest) {
     const { target, type, code } = parsed.data;
     const normalizedTarget =
       type === "email" ? target.trim().toLowerCase() : target.replace(/\D/g, "").slice(-10);
+    const cleanedCode = String(code).replace(/\D/g, "");
+
+    // Already verified in the last 10 minutes → treat as success (retry-safe)
+    const recentlyVerified = await prisma.otp.findFirst({
+      where: {
+        target: normalizedTarget,
+        type,
+        verified: true,
+        createdAt: { gte: new Date(Date.now() - 10 * 60 * 1000) },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    if (recentlyVerified) {
+      return NextResponse.json({ success: true, verified: true, already: true });
+    }
 
     const otp = await prisma.otp.findFirst({
       where: { target: normalizedTarget, type, verified: false },
@@ -25,7 +40,26 @@ export async function POST(req: NextRequest) {
     });
 
     if (!otp) {
-      return NextResponse.json({ error: "OTP not found. Please request a new OTP." }, { status: 400 });
+      // Helpful diagnostic: any OTP at all for this target?
+      const any = await prisma.otp.findFirst({
+        where: { target: normalizedTarget, type },
+        orderBy: { createdAt: "desc" },
+      });
+      console.warn("[otp/verify] not found", {
+        target: normalizedTarget,
+        type,
+        hadAny: !!any,
+        anyVerified: any?.verified,
+        anyAgeMs: any ? Date.now() - any.createdAt.getTime() : null,
+      });
+      return NextResponse.json(
+        {
+          error: any?.verified
+            ? "OTP already used. Please request a new OTP."
+            : "OTP not found. Please request a new OTP.",
+        },
+        { status: 400 }
+      );
     }
 
     if (otp.expiresAt < new Date()) {
@@ -35,9 +69,9 @@ export async function POST(req: NextRequest) {
     let valid = false;
 
     if (isTwoFactorConfigured() && isTwoFactorSessionCode(otp.code)) {
-      valid = await verifyOtpVia2Factor(otp.code, code);
+      valid = await verifyOtpVia2Factor(otp.code, cleanedCode);
     } else {
-      valid = otp.code === code;
+      valid = otp.code === cleanedCode;
     }
 
     if (!valid) {

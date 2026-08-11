@@ -179,19 +179,49 @@ export async function sendEmailOtp(email: string): Promise<{
   };
 }
 
-/** Verify OTP (works for SMS & Email session IDs) */
+/** Verify OTP (works for SMS & Email session IDs). AUTOGEN3 → prefer VERIFY3. */
 export async function verifyOtpVia2Factor(sessionId: string, otp: string): Promise<boolean> {
   const apiKey = process.env.TWO_FACTOR_API_KEY;
-  if (!apiKey || !sessionId) return false;
+  const cleanedOtp = String(otp || "").replace(/\D/g, "");
+  if (!apiKey || !sessionId || !cleanedOtp) return false;
 
-  try {
-    const url = `https://2factor.in/API/V1/${apiKey}/SMS/VERIFY/${sessionId}/${otp}`;
-    const res = await fetch(url, { cache: "no-store" });
-    const data = await res.json();
-    return data.Status === "Success" && String(data.Details).toLowerCase().includes("otp matched");
-  } catch {
-    return false;
+  const urls = [
+    `https://2factor.in/API/V1/${apiKey}/SMS/VERIFY3/${encodeURIComponent(sessionId)}/${cleanedOtp}`,
+    `https://2factor.in/API/V1/${apiKey}/SMS/VERIFY/${encodeURIComponent(sessionId)}/${cleanedOtp}`,
+  ];
+
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      const data = (await res.json()) as {
+        Status?: string;
+        status?: string;
+        Details?: string | number;
+        details?: string;
+        message?: string;
+      };
+      const status = String(data.Status || data.status || "").toLowerCase();
+      const details = String(data.Details ?? data.details ?? data.message ?? "").toLowerCase();
+
+      if (status === "success") {
+        // Some accounts return only Status=Success; others "OTP Matched"
+        if (!details || details.includes("match") || details.includes("otp")) {
+          return true;
+        }
+        return true;
+      }
+
+      // Explicit mismatch — try next endpoint once, then stop
+      if (details.includes("not match") || details.includes("expired") || details.includes("invalid")) {
+        console.warn("[2factor] verify failed:", status, details);
+        continue;
+      }
+    } catch (e) {
+      console.warn("[2factor] verify request error:", e);
+    }
   }
+
+  return false;
 }
 
 // Backward-compatible aliases
