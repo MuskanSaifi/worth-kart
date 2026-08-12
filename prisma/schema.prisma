@@ -416,6 +416,8 @@ model Banner {
   appImagePublicId   String?
   link               String?
   bgColor            String?
+  /// Title / subtitle / trust-line text color (e.g. #ffffff or #1e1b4b)
+  textColor          String?
   ctaLabel           String?
   /// HERO = top carousel, PROMO = mid offers grid, FOOTER = bottom strip
   placement          String   @default("HERO")

@@ -9,9 +9,19 @@ type PromoBanner = {
   image: string;
   link?: string | null;
   bgColor?: string | null;
+  textColor?: string | null;
   ctaLabel?: string | null;
   variant: string;
 };
+
+function withAlpha(hex: string, alpha: number) {
+  const raw = hex.replace("#", "");
+  if (raw.length !== 6) return hex;
+  const a = Math.round(Math.min(1, Math.max(0, alpha)) * 255)
+    .toString(16)
+    .padStart(2, "0");
+  return `#${raw}${a}`;
+}
 
 function PromoImage({ src, alt, className }: { src: string; alt: string; className?: string }) {
   if (!src) return null;
@@ -35,12 +45,15 @@ export function PromoBanners({ banners }: { banners: PromoBanner[] }) {
 
   return (
     <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {large.map((promo) => (
+      {large.map((promo) => {
+        const text = promo.textColor || "#ffffff";
+        return (
         <Link
           key={promo.id}
           href={promo.link || "/products"}
-          className="relative rounded-lg overflow-hidden text-white min-h-[200px] group hover:shadow-lg transition-shadow"
+          className="relative rounded-xl overflow-hidden min-h-[200px] group"
           style={{
+            color: text,
             background: `linear-gradient(135deg, ${promo.bgColor || "#db2777"}, ${promo.bgColor || "#9d174d"}99)`,
           }}
         >
@@ -65,7 +78,9 @@ export function PromoBanners({ banners }: { banners: PromoBanner[] }) {
             <div>
               <h3 className="text-lg md:text-xl font-bold leading-snug">{promo.title}</h3>
               {promo.subtitle && (
-                <p className="text-sm text-white/90 mt-1.5">{promo.subtitle}</p>
+                <p className="text-sm mt-1.5" style={{ color: withAlpha(text, 0.9) }}>
+                  {promo.subtitle}
+                </p>
               )}
             </div>
             <span className="inline-flex items-center gap-1 mt-4 w-fit text-sm font-semibold bg-white/25 px-3 py-1.5 rounded group-hover:bg-white/35 transition-colors">
@@ -73,16 +88,20 @@ export function PromoBanners({ banners }: { banners: PromoBanner[] }) {
             </span>
           </div>
         </Link>
-      ))}
+        );
+      })}
 
       {compact.length > 0 && (
         <div className="flex flex-col gap-4">
-          {compact.map((promo) => (
+          {compact.map((promo) => {
+            const text = promo.textColor || "#ffffff";
+            return (
             <Link
               key={promo.id}
               href={promo.link || "/products"}
-              className="relative flex-1 rounded-lg overflow-hidden text-white min-h-[92px] group hover:shadow-lg transition-shadow"
+              className="relative flex-1 rounded-xl overflow-hidden min-h-[92px] group"
               style={{
+                color: text,
                 background: `linear-gradient(90deg, ${promo.bgColor || "#2563eb"}, ${promo.bgColor || "#1d4ed8"}cc)`,
               }}
             >
@@ -105,14 +124,17 @@ export function PromoBanners({ banners }: { banners: PromoBanner[] }) {
               <div className="relative z-10 flex flex-col justify-center h-full min-h-[92px] p-4 pr-[45%]">
                 <h3 className="text-base font-bold leading-snug">{promo.title}</h3>
                 {promo.subtitle && (
-                  <p className="text-xs text-white/90 mt-1">{promo.subtitle}</p>
+                  <p className="text-xs mt-1" style={{ color: withAlpha(text, 0.9) }}>
+                    {promo.subtitle}
+                  </p>
                 )}
                 <span className="text-xs font-semibold mt-2 underline underline-offset-2">
                   {promo.ctaLabel || "View Details"}
                 </span>
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>

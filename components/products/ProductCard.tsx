@@ -24,7 +24,13 @@ export interface ProductCardData {
   stock?: number;
 }
 
-export function ProductCard({ product }: { product: ProductCardData }) {
+export function ProductCard({
+  product,
+  flat = false,
+}: {
+  product: ProductCardData;
+  flat?: boolean;
+}) {
   const { status } = useSession();
   const { addToCart } = useCart();
   const [wishlisted, setWishlisted] = useState(false);
@@ -64,17 +70,23 @@ export function ProductCard({ product }: { product: ProductCardData }) {
   };
 
   return (
-    <div className="group bg-card rounded-lg border border-border hover:shadow-lg transition-all duration-300 overflow-hidden relative">
-      {product.isFeatured && (
-        <span className="absolute top-2 left-2 z-10 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-          Sponsored
-        </span>
-      )}
-      {product.discount > 0 && (
-        <span className={`absolute ${product.isFeatured ? "top-7" : "top-2"} left-2 z-10 bg-pink-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded`}>
-          {product.discount}% OFF
-        </span>
-      )}
+    <div
+      className={`group bg-card rounded-xl border border-border overflow-hidden relative ${
+        flat ? "" : "hover:shadow-lg transition-all duration-300"
+      }`}
+    >
+      <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
+        {product.isFeatured && (
+          <span className="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+            Sponsored
+          </span>
+        )}
+        {product.discount > 0 && (
+          <span className="bg-pink-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+            {product.discount}% OFF
+          </span>
+        )}
+      </div>
       <button
         onClick={toggleWishlist}
         className="absolute top-2 right-2 z-10 p-1.5 bg-white/80 rounded-full hover:bg-white transition-colors opacity-0 group-hover:opacity-100"
@@ -119,7 +131,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
         <button
           onClick={handleAddToCart}
           disabled={adding || product.stock === 0}
-          className="w-full py-2 text-xs font-semibold text-primary border border-primary rounded hover:bg-primary hover:text-white transition-colors disabled:opacity-50"
+          className="w-full py-2 text-xs font-semibold text-primary border border-primary rounded-lg hover:bg-primary hover:text-white transition-colors disabled:opacity-50"
         >
           {product.stock === 0 ? "Out of Stock" : adding ? "Adding..." : "Add to Cart"}
         </button>

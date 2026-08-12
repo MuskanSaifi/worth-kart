@@ -46,7 +46,7 @@ export function ProductSection({ title, viewAllHref = "/products", fetchUrl, sho
   if (products.length === 0) return null;
 
   return (
-    <section className="bg-card rounded-lg border border-border p-4 md:p-5">
+    <section className="bg-card rounded-xl border border-border p-4 md:p-5">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
           <h2 className="text-lg md:text-xl font-semibold text-foreground">{title}</h2>
@@ -67,7 +67,7 @@ export function ProductSection({ title, viewAllHref = "/products", fetchUrl, sho
       <div className="relative group/scroll">
         <button
           onClick={() => scroll("left")}
-          className="absolute -left-3 top-1/2 -translate-y-1/2 z-10 p-2 bg-white rounded-full shadow-lg border border-border opacity-0 group-hover/scroll:opacity-100 transition-opacity hidden md:flex"
+          className="absolute -left-3 top-1/2 -translate-y-1/2 z-10 p-2 bg-white rounded-full border border-border opacity-0 group-hover/scroll:opacity-100 transition-opacity hidden md:flex"
         >
           <ChevronLeft size={18} />
         </button>
@@ -78,14 +78,14 @@ export function ProductSection({ title, viewAllHref = "/products", fetchUrl, sho
         >
           {products.map((product) => (
             <div key={product.id} className="flex-shrink-0 w-[160px] md:w-[200px]">
-              <ProductCard product={product} />
+              <ProductCard product={product} flat />
             </div>
           ))}
         </div>
 
         <button
           onClick={() => scroll("right")}
-          className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 p-2 bg-white rounded-full shadow-lg border border-border opacity-0 group-hover/scroll:opacity-100 transition-opacity hidden md:flex"
+          className="absolute -right-3 top-1/2 -translate-y-1/2 z-10 p-2 bg-white rounded-full border border-border opacity-0 group-hover/scroll:opacity-100 transition-opacity hidden md:flex"
         >
           <ChevronRight size={18} />
         </button>

@@ -11,16 +11,18 @@ const brands = [
 
 export function BrandStrip() {
   return (
-    <section className="bg-card rounded-lg border border-border p-4 md:p-5">
+    <section className="bg-card rounded-xl border border-border p-4 md:p-5">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg md:text-xl font-semibold">Popular Brands</h2>
-        <a href="/products" className="text-sm font-semibold text-primary hover:underline">View All</a>
+        <h2 className="text-lg md:text-xl font-semibold">Top Brands</h2>
+        <a href="/products" className="text-sm font-semibold text-primary hover:underline">
+          View All
+        </a>
       </div>
-      <div className="flex gap-6 overflow-x-auto scrollbar-hide py-2">
+      <div className="flex gap-4 overflow-x-auto scrollbar-hide py-1">
         {brands.map((brand) => (
           <div
             key={brand.name}
-            className="flex-shrink-0 w-24 h-16 bg-gray-50 rounded-lg flex items-center justify-center p-3 hover:shadow-md transition-shadow border border-border"
+            className="flex-shrink-0 w-28 h-16 bg-gray-50 rounded-xl flex items-center justify-center p-3 border border-border"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img

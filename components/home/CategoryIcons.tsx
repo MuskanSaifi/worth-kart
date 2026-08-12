@@ -31,7 +31,7 @@ const categories = [
 
 export function CategoryIcons() {
   return (
-    <section className="bg-card rounded-lg border border-border p-4 md:p-5">
+    <section className="bg-card rounded-xl border border-border p-4 md:p-5">
       <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-12 gap-3 md:gap-4">
         {categories.map((cat) => (
           <Link
@@ -39,7 +39,9 @@ export function CategoryIcons() {
             href={cat.href}
             className="flex flex-col items-center gap-2 group"
           >
-            <div className={`w-14 h-14 md:w-16 md:h-16 rounded-full ${cat.color} flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm`}>
+            <div
+              className={`w-14 h-14 md:w-[68px] md:h-[68px] rounded-full ${cat.color} flex items-center justify-center group-hover:scale-110 transition-transform`}
+            >
               <cat.icon size={24} />
             </div>
             <span className="text-[10px] md:text-xs text-center text-foreground font-medium leading-tight">

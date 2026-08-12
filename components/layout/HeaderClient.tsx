@@ -19,7 +19,13 @@ import { useCart } from "@/components/providers/CartProvider";
 import { isInternalBuyerEmail } from "@/lib/user-email";
 import { useEffect, useRef, useState } from "react";
 
-export function HeaderClient({ session }: { session: Session | null }) {
+export function HeaderClient({
+  session,
+  variant = "dark",
+}: {
+  session: Session | null;
+  variant?: "dark" | "light";
+}) {
   const { count } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -35,6 +41,11 @@ export function HeaderClient({ session }: { session: Session | null }) {
   const welcomeLabel = user?.name?.trim()
     ? `Welcome ${user.name.trim()}`
     : displayName || "My Account";
+
+  const actionClass =
+    variant === "light"
+      ? "flex items-center gap-2 text-foreground hover:text-primary transition-colors"
+      : "flex items-center gap-2 text-white hover:text-accent transition-colors";
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -56,7 +67,7 @@ export function HeaderClient({ session }: { session: Session | null }) {
               setMenuOpen((v) => !v);
               setMoreOpen(false);
             }}
-            className="flex items-center gap-2 text-white hover:text-accent transition-colors"
+            className={actionClass}
           >
             {user.image ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -142,20 +153,24 @@ export function HeaderClient({ session }: { session: Session | null }) {
           )}
         </div>
       ) : (
-        <Link
-          href="/login"
-          className="flex items-center gap-2 text-white hover:text-accent transition-colors"
-        >
+        <Link href="/login" className={actionClass}>
           <User size={20} />
-          <span className="hidden lg:block text-sm font-medium">Login</span>
+          <div className="hidden lg:block leading-tight text-left">
+            <p className="text-[11px] text-muted font-normal">Account</p>
+            <p className="text-sm font-semibold">Sign In</p>
+          </div>
         </Link>
       )}
 
-      {/* Become a Seller — prominent, Flipkart-style */}
+      {/* Become a Seller — desktop */}
       {(!user || user.role === "BUYER") && (
         <Link
           href="/seller/register"
-          className="hidden md:inline-flex items-center gap-1.5 text-white text-sm font-medium hover:text-accent transition-colors px-2 py-1 rounded"
+          className={`hidden md:inline-flex items-center gap-1.5 text-sm font-medium px-2 py-1 rounded ${
+            variant === "light"
+              ? "text-foreground hover:text-primary"
+              : "text-white hover:text-accent"
+          }`}
         >
           <Store size={16} />
           Become a Seller
@@ -170,7 +185,7 @@ export function HeaderClient({ session }: { session: Session | null }) {
             setMoreOpen((v) => !v);
             setMenuOpen(false);
           }}
-          className="flex items-center gap-1 text-white hover:text-accent transition-colors text-sm"
+          className={`${actionClass} text-sm`}
         >
           More
           <ChevronDown size={14} className={moreOpen ? "rotate-180" : ""} />
@@ -201,7 +216,7 @@ export function HeaderClient({ session }: { session: Session | null }) {
               <Bell size={16} className="text-muted" /> Notification Settings
             </Link>
             <Link
-              href="#"
+              href="/help"
               className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-purple-50"
               onClick={() => setMoreOpen(false)}
             >
@@ -211,10 +226,7 @@ export function HeaderClient({ session }: { session: Session | null }) {
         )}
       </div>
 
-      <Link
-        href="/cart"
-        className="flex items-center gap-1 text-white hover:text-accent transition-colors relative"
-      >
+      <Link href="/cart" className={`${actionClass} relative`}>
         <ShoppingCart size={22} />
         <span className="hidden lg:block text-sm font-medium">Cart</span>
         {count > 0 && (

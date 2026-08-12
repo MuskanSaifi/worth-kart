@@ -9,6 +9,7 @@ type FooterBanner = {
   image: string;
   link?: string | null;
   bgColor?: string | null;
+  textColor?: string | null;
   ctaLabel?: string | null;
 };
 
@@ -16,6 +17,7 @@ export function FooterPromoBanner({ banners }: { banners: FooterBanner[] }) {
   if (banners.length === 0) return null;
 
   const banner = banners[0];
+  const text = banner.textColor || "#ffffff";
 
   return (
     <section className="rounded-lg overflow-hidden relative min-h-[140px] md:min-h-[180px]">
@@ -27,11 +29,14 @@ export function FooterPromoBanner({ banners }: { banners: FooterBanner[] }) {
       <div className="absolute inset-0 opacity-40">
         <Image src={banner.image} alt="" fill className="object-cover" unoptimized />
       </div>
-      <div className="relative z-10 p-6 md:p-10 text-white flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div
+        className="relative z-10 p-6 md:p-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+        style={{ color: text }}
+      >
         <div>
           <h2 className="text-xl md:text-3xl font-bold">{banner.title}</h2>
           {banner.subtitle && (
-            <p className="mt-2 text-sm md:text-base text-white/80">{banner.subtitle}</p>
+            <p className="mt-2 text-sm md:text-base opacity-80">{banner.subtitle}</p>
           )}
         </div>
         <Link

@@ -26,6 +26,7 @@ type Banner = {
   appImagePublicId?: string | null;
   link?: string | null;
   bgColor?: string | null;
+  textColor?: string | null;
   ctaLabel?: string | null;
   placement: string;
   variant: string;
@@ -43,6 +44,7 @@ type FormState = {
   appImagePublicId: string;
   link: string;
   bgColor: string;
+  textColor: string;
   ctaLabel: string;
   placement: "HERO" | "PROMO" | "FOOTER";
   variant: "STANDARD" | "COMPACT";
@@ -59,6 +61,7 @@ const emptyForm = (placement: FormState["placement"] = "HERO"): FormState => ({
   appImagePublicId: "",
   link: "/products",
   bgColor: "#5b21b6",
+  textColor: "#ffffff",
   ctaLabel: "Shop Now",
   placement,
   variant: "STANDARD",
@@ -147,6 +150,7 @@ export function AdminBannersManager({ initialBanners }: { initialBanners: Banner
       subtitle: form.subtitle || null,
       link: form.link || null,
       bgColor: form.bgColor || null,
+      textColor: form.textColor || null,
       ctaLabel: form.ctaLabel || null,
       imagePublicId: form.imagePublicId || null,
       appImage: form.appImage || null,
@@ -304,6 +308,18 @@ export function AdminBannersManager({ initialBanners }: { initialBanners: Banner
                 onChange={(e) => setForm({ ...form, bgColor: e.target.value })}
                 className="mt-1 h-10 w-full border border-border rounded-lg"
               />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted">Text color</label>
+              <input
+                type="color"
+                value={form.textColor || "#ffffff"}
+                onChange={(e) => setForm({ ...form, textColor: e.target.value })}
+                className="mt-1 h-10 w-full border border-border rounded-lg"
+              />
+              <p className="mt-1 text-[11px] text-muted">
+                Title, subtitle &amp; trust line (light bg pe dark choose karo)
+              </p>
             </div>
             <div>
               <label className="text-xs font-medium text-muted">Sort order</label>
@@ -511,6 +527,7 @@ export function AdminBannersManager({ initialBanners }: { initialBanners: Banner
                     appImagePublicId: banner.appImagePublicId || "",
                     link: banner.link || "",
                     bgColor: banner.bgColor || "#5b21b6",
+                    textColor: banner.textColor || "#ffffff",
                     ctaLabel: banner.ctaLabel || "Shop Now",
                     placement: banner.placement as FormState["placement"],
                     variant: (banner.variant as FormState["variant"]) || "STANDARD",

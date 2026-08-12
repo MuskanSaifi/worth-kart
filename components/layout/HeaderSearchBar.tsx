@@ -201,7 +201,7 @@ function useProductSuggest(query: string, enabled: boolean) {
   return { loading, data };
 }
 
-export function MobileSearchBar() {
+export function MobileSearchBar({ buttonClassName }: { buttonClassName?: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -224,7 +224,7 @@ export function MobileSearchBar() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="sm:hidden p-2 text-white"
+        className={buttonClassName || "sm:hidden p-2 text-white"}
         aria-label="Open search"
       >
         <Search size={22} />
@@ -262,7 +262,7 @@ export function MobileSearchBar() {
             setFocused(false);
             setQuery("");
           }}
-          className="text-white text-xs px-2"
+          className="text-foreground text-xs px-2"
         >
           ✕
         </button>
@@ -281,7 +281,7 @@ export function MobileSearchBar() {
   );
 }
 
-export function HeaderSearchBar() {
+export function HeaderSearchBar({ variant = "dark" }: { variant?: "dark" | "light" }) {
   const router = useRouter();
   const listId = useId();
   const [query, setQuery] = useState("");
@@ -307,11 +307,16 @@ export function HeaderSearchBar() {
     router.push(`/search?q=${encodeURIComponent(q)}`);
   };
 
+  const ring =
+    variant === "light" ? "ring-1 ring-border shadow-sm" : "shadow-md ring-2 ring-white/20";
+  const mobileBtn =
+    variant === "light" ? "sm:hidden p-2 text-foreground" : "sm:hidden p-2 text-white";
+
   return (
     <>
       <div ref={wrapRef} className="flex-1 max-w-2xl hidden sm:block relative">
         <form onSubmit={submit} className="w-full" role="search">
-          <div className="flex w-full rounded-md overflow-hidden shadow-md ring-2 ring-white/20">
+          <div className={`flex w-full rounded-lg overflow-hidden ${ring}`}>
             <input
               name="q"
               value={query}
@@ -326,7 +331,7 @@ export function HeaderSearchBar() {
             />
             <button
               type="submit"
-              className="bg-[#ff9f00] hover:bg-[#e88e00] px-5 flex items-center justify-center transition-colors"
+              className="bg-primary hover:bg-primary-dark px-5 flex items-center justify-center transition-colors"
               aria-label="Search"
             >
               <Search size={18} className="text-white" />
@@ -343,7 +348,7 @@ export function HeaderSearchBar() {
           />
         </div>
       </div>
-      <MobileSearchBar />
+      <MobileSearchBar buttonClassName={mobileBtn} />
     </>
   );
 }
