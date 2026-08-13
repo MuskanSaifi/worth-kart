@@ -6,9 +6,10 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import Image from "next/image";
 import { MapPin, Download, ChevronDown, HelpCircle, Package, Phone } from "lucide-react";
+import type { Session } from "next-auth";
 
 export async function Header() {
-  let session: Awaited<ReturnType<typeof auth>> = null;
+  let session: Session | null = null;
   try {
     session = await auth();
   } catch (error) {

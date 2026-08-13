@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 type CashfreeCheckout = {
@@ -31,7 +31,7 @@ function loadCashfreeSdk(): Promise<NonNullable<typeof window.Cashfree>> {
   });
 }
 
-export default function AppPayPage() {
+function AppPayContent() {
   const searchParams = useSearchParams();
   const [message, setMessage] = useState("Opening payment gateway...");
 
@@ -46,7 +46,7 @@ export default function AppPayPage() {
     let mounted = true;
     (async () => {
       try {
-    const Cashfree = await loadCashfreeSdk();
+        const Cashfree = await loadCashfreeSdk();
         const cashfree = Cashfree({
           mode: mode === "production" ? "production" : "sandbox",
         });
@@ -76,5 +76,19 @@ export default function AppPayPage() {
         <p className="text-sm text-muted">{message}</p>
       </div>
     </div>
+  );
+}
+
+export default function AppPayPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center px-4 text-center">
+          <p className="text-sm text-muted">Opening payment gateway...</p>
+        </div>
+      }
+    >
+      <AppPayContent />
+    </Suspense>
   );
 }

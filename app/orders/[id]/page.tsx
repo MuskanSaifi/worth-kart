@@ -104,6 +104,7 @@ export default function OrderDetailPage() {
   }, [id]);
 
   async function cancelOrder() {
+    if (!order) return;
     const ok = await confirm(
       order.paymentMethod !== "COD" && order.paymentStatus === "PAID"
         ? "Cancel this order? Refund will go to your original payment method (UPI 1–3 days, card/netbanking 3–5 days)."
