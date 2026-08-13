@@ -9,6 +9,7 @@ import { useCart } from "@/components/providers/CartProvider";
 import { notify } from "@/lib/notify";
 import { useSession } from "next-auth/react";
 import type { ProductCardData } from "@/components/products/ProductCard";
+import { pickProductImageUrl } from "@/lib/product-images";
 
 export function CartProductRail({
   title,
@@ -76,7 +77,7 @@ export function CartProductRail({
 
       <div ref={scrollRef} className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
         {products.map((product) => {
-          const image = product.images[0]?.url || "/placeholder-product.jpg";
+          const image = pickProductImageUrl(product.images);
           return (
             <div
               key={product.id}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isProductPubliclyVisible } from "@/lib/products";
 import { getRelatedProducts, getSimilarBrandProducts } from "@/lib/product-detail";
+import { withProductImageFallback } from "@/lib/product-images";
 
 export async function GET(
   _req: NextRequest,
@@ -37,9 +38,9 @@ export async function GET(
     ]);
 
     return NextResponse.json({
-      product,
-      relatedProducts,
-      similarProducts,
+      product: withProductImageFallback(product),
+      relatedProducts: relatedProducts.map(withProductImageFallback),
+      similarProducts: similarProducts.map(withProductImageFallback),
     });
   } catch {
     return NextResponse.json({ error: "Failed to fetch product" }, { status: 500 });

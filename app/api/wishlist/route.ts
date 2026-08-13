@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
+import { productCardImagesInclude } from "@/lib/product-images";
 
 export async function GET() {
   try {
@@ -9,7 +10,7 @@ export async function GET() {
       where: { userId: session.user.id },
       include: {
         product: {
-          include: { images: { where: { isPrimary: true }, take: 1 } },
+          include: { images: productCardImagesInclude },
         },
       },
     });

@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { publicProductFilter } from "@/lib/products";
 import { rankProducts } from "@/lib/product-ranking";
+import { productCardImagesInclude, withProductImageFallback } from "@/lib/product-images";
 
 const RANK_FETCH_CAP = 500;
 
 const productInclude = {
-  images: { where: { isPrimary: true }, take: 1 },
+  images: productCardImagesInclude,
   category: { select: { name: true, slug: true } },
   seller: { select: { businessName: true, rating: true, totalSales: true, status: true } },
 } as const;
@@ -200,7 +201,7 @@ export async function GET(req: NextRequest) {
         prisma.product.findMany({
           where,
           include: {
-            images: { select: { url: true }, take: 5 },
+            images: { ...productCardImagesInclude, take: 5 },
             category: productInclude.category,
             seller: productInclude.seller,
           },
@@ -210,7 +211,7 @@ export async function GET(req: NextRequest) {
       ]);
 
       const ranked = rankProducts(all, { search: search || undefined });
-      const products = ranked.slice(skip, skip + limit);
+      const products = ranked.slice(skip, skip + limit).map(withProductImageFallback);
 
       return NextResponse.json({
         products,
@@ -234,7 +235,7 @@ export async function GET(req: NextRequest) {
               ? { discount: "desc" }
               : { createdAt: "desc" };
 
-    const [products, total] = await Promise.all([
+    const [rawProducts, total] = await Promise.all([
       prisma.product.findMany({
         where,
         include: productInclude,
@@ -244,6 +245,7 @@ export async function GET(req: NextRequest) {
       }),
       prisma.product.count({ where }),
     ]);
+    const products = rawProducts.map(withProductImageFallback);
 
     return NextResponse.json({
       products,

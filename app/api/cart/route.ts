@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { isProductPubliclyVisible } from "@/lib/products";
+import { productCardImagesInclude } from "@/lib/product-images";
 
 export async function GET() {
   try {
@@ -13,7 +14,7 @@ export async function GET() {
           include: {
             product: {
               include: {
-                images: { where: { isPrimary: true }, take: 1 },
+                images: productCardImagesInclude,
                 seller: { select: { businessName: true } },
               },
             },
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest) {
       include: {
         items: {
           include: {
-            product: { include: { images: { where: { isPrimary: true }, take: 1 }, seller: { select: { businessName: true } } } },
+            product: { include: { images: productCardImagesInclude, seller: { select: { businessName: true } } } },
           },
         },
       },

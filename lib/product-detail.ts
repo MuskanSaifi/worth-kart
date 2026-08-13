@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { publicProductFilter } from "@/lib/products";
+import { productCardImagesInclude } from "@/lib/product-images";
 
 export async function getCategoryBreadcrumb(categoryId: string) {
   const categories = await prisma.category.findMany({
@@ -17,7 +18,7 @@ export async function getCategoryBreadcrumb(categoryId: string) {
 }
 
 const relatedInclude = {
-  images: { where: { isPrimary: true }, take: 1 },
+  images: productCardImagesInclude,
   category: { select: { name: true, slug: true } },
 } as const;
 

@@ -1,6 +1,7 @@
 import { getSellerProfile, getAccountSetupSteps, getSetupProgress } from "@/lib/seller";
 import { prisma } from "@/lib/prisma";
 import { SellerDashboardHome } from "@/components/seller/SellerDashboardHome";
+import { productCardImagesInclude } from "@/lib/product-images";
 
 export default async function SellerHomePage() {
   const { seller } = await getSellerProfile();
@@ -28,7 +29,7 @@ export default async function SellerHomePage() {
     }),
     prisma.product.findMany({
       where: { sellerId: seller.id },
-      include: { images: { where: { isPrimary: true }, take: 1 } },
+      include: { images: productCardImagesInclude },
       orderBy: { createdAt: "desc" },
       take: 6,
     }),

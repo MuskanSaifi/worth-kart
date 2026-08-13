@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSellerProfile, getAccountSetupSteps, getSetupProgress } from "@/lib/seller";
+import { productCardImagesInclude } from "@/lib/product-images";
 
 export async function GET(req: NextRequest) {
   try {
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest) {
       }),
       prisma.product.findMany({
         where: { sellerId: seller.id },
-        include: { images: { where: { isPrimary: true }, take: 1 } },
+        include: { images: productCardImagesInclude },
         orderBy: { createdAt: "desc" },
         take: 6,
       }),

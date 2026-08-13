@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { publicProductFilter } from "@/lib/products";
+import { pickProductImageUrl, productCardImagesInclude } from "@/lib/product-images";
 
 /** Lightweight autocomplete for header search. */
 export async function GET(req: NextRequest) {
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
           price: true,
           mrp: true,
           brand: true,
-          images: { where: { isPrimary: true }, take: 1, select: { url: true } },
+          images: productCardImagesInclude,
           category: { select: { name: true, slug: true } },
         },
         orderBy: [{ rating: "desc" }, { reviewCount: "desc" }],
@@ -68,7 +69,7 @@ export async function GET(req: NextRequest) {
         price: p.price,
         mrp: p.mrp,
         brand: p.brand,
-        image: p.images[0]?.url || null,
+        image: pickProductImageUrl(p.images),
         category: p.category?.name || null,
         href: `/products/${p.slug}`,
       })),

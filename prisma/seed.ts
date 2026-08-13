@@ -158,7 +158,7 @@ async function main() {
       description: "Active Noise Cancellation, Adaptive Transparency, MagSafe Charging Case.",
       price: 19999, mrp: 24900, stock: 45, brand: "Apple",
       categorySlug: "electronics-audio-earbuds", isDeal: true,
-      image: "https://images.unsplash.com/photo-1600294037688-c8b4a5a9322a?w=400&h=400&fit=crop",
+      image: "https://images.unsplash.com/photo-1606220945770-b5b6c2c55bf1?w=400&h=400&fit=crop",
     },
     {
       name: "Men's Casual Cotton T-Shirt",
@@ -174,7 +174,7 @@ async function main() {
       description: "Rayon fabric kurta with palazzo pants and dupatta.",
       price: 599, mrp: 1999, stock: 200, brand: "Libas",
       categorySlug: "fashion-women-kurtas", isDeal: true,
-      image: "https://images.unsplash.com/photo-1583391735257-f30a1a8a4c3e?w=400&h=400&fit=crop",
+      image: "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=400&fit=crop",
     },
     {
       name: "Lakme Absolute Matte Lipstick",
@@ -182,7 +182,7 @@ async function main() {
       description: "Long-lasting matte finish lipstick with intense color payoff.",
       price: 349, mrp: 750, stock: 300, brand: "Lakme",
       categorySlug: "beauty-makeup-lipstick", isDeal: true,
-      image: "https://images.unsplash.com/photo-1586495777744-4413f210fc35?w=400&h=400&fit=crop",
+      image: "https://images.unsplash.com/photo-1631214524020-7e18db9a8f92?w=400&h=400&fit=crop",
     },
     {
       name: "Sony WH-1000XM5 Headphones",
@@ -198,7 +198,7 @@ async function main() {
       description: "6.72\" FHD+ Display, 108MP Camera, 5000mAh Battery.",
       price: 16999, mrp: 19999, stock: 60, brand: "OnePlus",
       categorySlug: "electronics-mobiles-smartphones", isDeal: true,
-      image: "https://images.unsplash.com/photo-1598327275564-c6de1d2c1b0d?w=400&h=400&fit=crop",
+      image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&h=400&fit=crop",
     },
     {
       name: "Prestige Iris 750W Mixer Grinder",
@@ -206,7 +206,7 @@ async function main() {
       description: "750W powerful motor, 3 stainless steel jars, 2 year warranty.",
       price: 3299, mrp: 5495, stock: 100, brand: "Prestige",
       categorySlug: "tvs-appliances-mixer-grinders",
-      image: "https://images.unsplash.com/photo-1570222094114-d054a817e56a?w=400&h=400&fit=crop",
+      image: "https://images.unsplash.com/photo-1556912173-46c336c7fd55?w=400&h=400&fit=crop",
     },
     {
       name: "Nike Revolution 6 Running Shoes",
@@ -239,7 +239,7 @@ async function main() {
       price: 1299, mrp: 4999, stock: 75, brand: "Meera Fashion",
       categorySlug: "fashion-women-sarees", isDeal: true, isFeatured: true,
       sellerId: "fashion",
-      image: "https://images.unsplash.com/photo-1610037127423-fa920bb390de?w=400&h=400&fit=crop",
+      image: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=400&h=400&fit=crop",
     },
     {
       name: "Cotton Printed Saree — Daily Wear",
@@ -248,7 +248,7 @@ async function main() {
       price: 499, mrp: 1299, stock: 200, brand: "Meera Fashion",
       categorySlug: "fashion-women-sarees", isDeal: true,
       sellerId: "fashion",
-      image: "https://images.unsplash.com/photo-1583391735257-f30a1a8a4c3e?w=400&h=400&fit=crop",
+      image: "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=400&fit=crop",
     },
     {
       name: "65W SuperVOOC Fast Charger",
@@ -256,7 +256,7 @@ async function main() {
       description: "65W PD fast charger with Type-C cable. Compatible with smartphones, tablets, and laptops.",
       price: 599, mrp: 1999, stock: 350, brand: "Ambrane",
       categorySlug: "electronics-mobiles-chargers", isDeal: true, isFeatured: true,
-      image: "https://images.unsplash.com/photo-1591290619762-d2a4a9b2f5b6?w=400&h=400&fit=crop",
+      image: "https://images.unsplash.com/photo-1625948515291-69613efd103f?w=400&h=400&fit=crop",
     },
     {
       name: "20W USB-C Charger Adapter",
@@ -272,7 +272,7 @@ async function main() {
       description: "Super soft plush teddy bear. Safe for kids 3+. Washable fabric.",
       price: 299, mrp: 799, stock: 180, brand: "FunSkool",
       categorySlug: "baby-kids-toys-soft", isDeal: true,
-      image: "https://images.unsplash.com/photo-1558060370-d644479cb6f5?w=400&h=400&fit=crop",
+      image: "https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=400&h=400&fit=crop",
     },
     {
       name: "Remote Control Racing Car",
@@ -344,9 +344,19 @@ async function main() {
   for (const p of products) {
     const discount = Math.round(((p.mrp - p.price) / p.mrp) * 100);
     const productSellerId = p.sellerId === "fashion" ? fashionSeller.id : seller.id;
-    await prisma.product.upsert({
+    const product = await prisma.product.upsert({
       where: { slug: p.slug },
-      update: {},
+      update: {
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        mrp: p.mrp,
+        discount,
+        stock: p.stock,
+        brand: p.brand,
+        isDeal: p.isDeal || false,
+        isFeatured: p.isFeatured || false,
+      },
       create: {
         name: p.name,
         slug: p.slug,
@@ -368,7 +378,23 @@ async function main() {
           create: [{ url: p.image, isPrimary: true, alt: p.name }],
         },
       },
+      include: { images: true },
     });
+
+    // Keep seed images in sync (fix broken/outdated Unsplash URLs)
+    if (product.images.length === 0) {
+      await prisma.productImage.create({
+        data: { productId: product.id, url: p.image, isPrimary: true, alt: p.name },
+      });
+    } else {
+      const primary = product.images.find((img) => img.isPrimary) || product.images[0];
+      if (primary.url !== p.image) {
+        await prisma.productImage.update({
+          where: { id: primary.id },
+          data: { url: p.image, isPrimary: true, alt: p.name },
+        });
+      }
+    }
   }
 
   const banners = [

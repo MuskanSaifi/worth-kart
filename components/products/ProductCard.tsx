@@ -5,9 +5,13 @@ import Link from "next/link";
 import { Heart, Star } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { useSession } from "next-auth/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCart } from "@/components/providers/CartProvider";
 import { notify } from "@/lib/notify";
+import {
+  pickProductImageUrl,
+  PRODUCT_IMAGE_PLACEHOLDER,
+} from "@/lib/product-images";
 
 export interface ProductCardData {
   id: string;
@@ -35,7 +39,13 @@ export function ProductCard({
   const { addToCart } = useCart();
   const [wishlisted, setWishlisted] = useState(false);
   const [adding, setAdding] = useState(false);
-  const imageUrl = product.images[0]?.url || "/placeholder-product.jpg";
+  const [imageSrc, setImageSrc] = useState(
+    () => pickProductImageUrl(product.images)
+  );
+
+  useEffect(() => {
+    setImageSrc(pickProductImageUrl(product.images));
+  }, [product.images, product.id]);
 
   const toggleWishlist = async () => {
     if (status !== "authenticated") {
@@ -97,12 +107,13 @@ export function ProductCard({
       <Link href={`/products/${product.slug}`}>
         <div className="aspect-square bg-gray-50 p-4 flex items-center justify-center overflow-hidden">
           <Image
-            src={imageUrl}
+            src={imageSrc}
             alt={product.name}
             width={200}
             height={200}
             className="object-contain max-h-full group-hover:scale-105 transition-transform duration-300"
             unoptimized
+            onError={() => setImageSrc(PRODUCT_IMAGE_PLACEHOLDER)}
           />
         </div>
         <div className="p-3">

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Building2, MapPin, Package, Star } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { publicProductFilter } from "@/lib/products";
+import { productCardImagesInclude } from "@/lib/product-images";
 import { ProductCard } from "@/components/products/ProductCard";
 
 type PageProps = {
@@ -25,7 +26,7 @@ async function getSellerWithProducts(id: string) {
       products: {
         where: publicProductFilter,
         include: {
-          images: { where: { isPrimary: true }, take: 1 },
+          images: productCardImagesInclude,
         },
         orderBy: { createdAt: "desc" },
       },
