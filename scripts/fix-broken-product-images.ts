@@ -18,7 +18,9 @@ const FIXES: Record<string, string> = {
   "https://images.unsplash.com/photo-1610037127423-fa920bb390de?w=400&h=400&fit=crop":
     "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=400&h=400&fit=crop",
   "https://images.unsplash.com/photo-1591290619762-d2a4a9b2f5b6?w=400&h=400&fit=crop":
-    "https://images.unsplash.com/photo-1625948515291-69613efd103f?w=400&h=400&fit=crop",
+    "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=400&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1625948515291-69613efd103f?w=400&h=400&fit=crop":
+    "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=400&h=400&fit=crop",
   "https://images.unsplash.com/photo-1558060370-d644479cb6f5?w=400&h=400&fit=crop":
     "https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=400&h=400&fit=crop",
 };
@@ -39,7 +41,7 @@ async function main() {
   // Also fix by slug if URL already changed partially / empty images
   const bySlug: Record<string, string> = {
     "65w-fast-charger-type-c":
-      "https://images.unsplash.com/photo-1625948515291-69613efd103f?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=400&h=400&fit=crop",
     "banarasi-silk-saree-zari":
       "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=400&h=400&fit=crop",
     "apple-airpods-pro-2nd-gen":

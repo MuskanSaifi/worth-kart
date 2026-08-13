@@ -256,7 +256,7 @@ async function main() {
       description: "65W PD fast charger with Type-C cable. Compatible with smartphones, tablets, and laptops.",
       price: 599, mrp: 1999, stock: 350, brand: "Ambrane",
       categorySlug: "electronics-mobiles-chargers", isDeal: true, isFeatured: true,
-      image: "https://images.unsplash.com/photo-1625948515291-69613efd103f?w=400&h=400&fit=crop",
+      image: "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=400&h=400&fit=crop",
     },
     {
       name: "20W USB-C Charger Adapter",
