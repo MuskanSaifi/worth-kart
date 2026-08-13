@@ -72,7 +72,11 @@ export default function AdminPayoutsPage() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed");
-      notify.success(`Marked ${json.marked} settlement(s) paid`, json.payoutBatchId);
+      notify.success(
+        json.payoutBatchId
+          ? `Marked ${json.marked} settlement(s) paid (batch ${json.payoutBatchId})`
+          : `Marked ${json.marked} settlement(s) paid`
+      );
       await load();
     } catch (e) {
       notify.error(e instanceof Error ? e.message : "Failed");
