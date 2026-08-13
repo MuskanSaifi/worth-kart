@@ -64,15 +64,15 @@ export async function Header() {
 
       {/* Main white header */}
       <div className="bg-white border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 py-2.5 md:py-3 flex items-center gap-3 md:gap-4">
           <Link href="/" className="flex-shrink-0" aria-label="WorthKart Home">
             <Image
               src="/logo.png"
               alt="WorthKart"
-              width={160}
-              height={56}
+              width={220}
+              height={80}
               priority
-              className="h-10 md:h-11 w-auto object-contain"
+              className="h-12 sm:h-14 md:h-16 w-auto object-contain"
             />
           </Link>
 
