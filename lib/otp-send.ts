@@ -12,6 +12,10 @@ import {
 
 export type OtpChannel = "email" | "phone";
 
+/** Demo test phones for Google Play Review / QA (always uses static OTP: 1234) */
+export const DEMO_REVIEW_PHONE_NUMBERS = ["9999999999", "9876543210"];
+export const DEMO_REVIEW_OTP = "1234";
+
 function normalizeTarget(target: string, type: OtpChannel): string {
   return type === "email"
     ? target.trim().toLowerCase()
@@ -41,6 +45,26 @@ export async function sendAndStoreOtp(
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
   await prisma.otp.deleteMany({ where: { target: normalizedTarget, type } });
+
+  // Fast-track demo numbers for Google Play Reviewers & QA
+  if (type === "phone" && DEMO_REVIEW_PHONE_NUMBERS.includes(normalizedTarget)) {
+    await prisma.otp.create({
+      data: {
+        target: normalizedTarget,
+        type,
+        code: DEMO_REVIEW_OTP,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+      },
+    });
+    return {
+      success: true,
+      message: `OTP sent to ${maskPhone(normalizedTarget)}`,
+      target: normalizedTarget,
+      type,
+      maskedTarget: maskPhone(normalizedTarget),
+      devOtp: DEMO_REVIEW_OTP,
+    };
+  }
 
   if (type === "phone") {
     if (!isTwoFactorConfigured()) {

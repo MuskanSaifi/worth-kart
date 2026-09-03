@@ -45,6 +45,33 @@ async function main() {
     },
   });
 
+  // Google Play Console Review Test Account
+  await prisma.user.upsert({
+    where: { email: "buyer-9999999999@users.worthkart.in" },
+    update: { phoneVerified: true },
+    create: {
+      name: "Test Buyer",
+      email: "buyer-9999999999@users.worthkart.in",
+      phone: "9999999999",
+      password: buyerPass,
+      role: "BUYER",
+      emailVerified: true,
+      phoneVerified: true,
+      cart: { create: {} },
+      addresses: {
+        create: {
+          name: "Test Buyer",
+          phone: "9999999999",
+          line1: "123, Ring Road",
+          city: "New Delhi",
+          state: "Delhi",
+          pincode: "110001",
+          isDefault: true,
+        },
+      },
+    },
+  });
+
   const sellerUser = await prisma.user.upsert({
     where: { email: "seller@worthkart.com" },
     update: {},

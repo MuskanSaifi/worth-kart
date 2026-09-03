@@ -56,10 +56,12 @@ export async function getOrCreateBuyerByPhone(phone: string) {
     return existing;
   }
 
+  const isDemo = normalized === "9999999999" || normalized === "9876543210";
   const internalEmail = `buyer-${normalized}@users.worthkart.in`;
   const hashed = await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 12);
   return prisma.user.create({
     data: {
+      name: isDemo ? "Test Buyer" : undefined,
       email: internalEmail,
       phone: normalized,
       password: hashed,
@@ -67,6 +69,21 @@ export async function getOrCreateBuyerByPhone(phone: string) {
       emailVerified: false,
       phoneVerified: true,
       cart: { create: {} },
+      ...(isDemo
+        ? {
+            addresses: {
+              create: {
+                name: "Test Buyer",
+                phone: normalized,
+                line1: "123, Ring Road",
+                city: "New Delhi",
+                state: "Delhi",
+                pincode: "110001",
+                isDefault: true,
+              },
+            },
+          }
+        : {}),
     },
   });
 }

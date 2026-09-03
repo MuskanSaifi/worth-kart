@@ -172,6 +172,35 @@ export const DEFAULT_SITE_PAGES: SeedSitePage[] = [
         "We aim to acknowledge grievances within 48 hours and resolve them as per applicable consumer laws.",
       ]),
   },
+  {
+    title: "Account & Data Deletion Request",
+    slug: "delete-account",
+    section: "POLICY",
+    sortOrder: 4,
+    seoTitle: "Account & Data Deletion Request | WorthKart",
+    seoDescription: "Learn how to request deletion of your WorthKart account and personal data.",
+    contentHtml:
+      wrap("Request Account and Data Deletion", [
+        "At WorthKart (developed and operated for worthkart.in), we respect your right to control your personal data.",
+        "If you wish to delete your WorthKart account and associated personal data, please follow the steps outlined below.",
+      ]) +
+      wrap("Steps to Request Deletion", [
+        "1. Send an email to <strong>support@worthkart.in</strong> with the subject line <em>'Account Deletion Request'</em>.",
+        "2. Mention your registered mobile number and/or email address associated with your WorthKart account.",
+        "3. Alternatively, you can submit a deletion request from the WorthKart mobile app under Account → Support.",
+        "4. Our team will verify your request and process the account deletion within 7 to 14 business days.",
+      ]) +
+      wrap("Data That Will Be Deleted", [
+        "• Your personal profile information (name, profile picture, saved email).",
+        "• Saved delivery addresses and contact numbers.",
+        "• Shopping cart items and wishlist preferences.",
+        "• Active login sessions and authentication tokens.",
+      ]) +
+      wrap("Data Retention & Exceptions", [
+        "• Past completed transaction and invoice records will be retained for statutory tax, legal, and financial audit compliance as required by applicable Indian laws.",
+        "• Active orders or pending refund requests must be completed or resolved before account deletion can be finalized.",
+      ]),
+  },
 ];
 
 export async function seedSitePages(prisma: {

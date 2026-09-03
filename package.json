@@ -12,7 +12,7 @@
     "db:migrate": "prisma db push",
     "db:migrate:deploy": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "db:setup": "prisma db push && tsx prisma/seed.ts"
+    "db:setup": "prisma db push && tsx prisma/seed.ts"  
   },
   "dependencies": {
     "@prisma/client": "6.19.0",

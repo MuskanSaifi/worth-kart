@@ -129,5 +129,5 @@ export function buildProductJsonLd(
 }
 
 function getSiteUrl() {
-  return process.env.NEXTAUTH_URL || "https://worthkart.com";
+  return process.env.NEXTAUTH_URL || "https://worthkart.in";
 }

@@ -5,6 +5,52 @@ import { NextResponse } from "next/server";
 const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
+  const host =
+    req.headers.get("x-forwarded-host") ||
+    req.headers.get("host") ||
+    req.nextUrl.host ||
+    "";
+  const proto =
+    req.headers.get("x-forwarded-proto") ||
+    (req.nextUrl.protocol ? req.nextUrl.protocol.replace(":", "") : "https");
+
+  const isLocal =
+    host.includes("localhost") ||
+    host.startsWith("127.") ||
+    host.startsWith("192.168.") ||
+    host.includes("::1");
+
+  // 1. 301 Permanent Redirect for www domain to non-www
+  if (!isLocal && host.toLowerCase().startsWith("www.")) {
+    const cleanHost = host.replace(/^www\./i, "");
+    const primaryHost = cleanHost.includes("worthkart.com")
+      ? "worthkart.in"
+      : cleanHost;
+    const targetUrl = new URL(
+      req.nextUrl.pathname + req.nextUrl.search,
+      `https://${primaryHost}`
+    );
+    return NextResponse.redirect(targetUrl, 301);
+  }
+
+  // 2. 301 Permanent Redirect for worthkart.com to worthkart.in
+  if (!isLocal && host.toLowerCase().includes("worthkart.com")) {
+    const targetUrl = new URL(
+      req.nextUrl.pathname + req.nextUrl.search,
+      "https://worthkart.in"
+    );
+    return NextResponse.redirect(targetUrl, 301);
+  }
+
+  // 3. 301 Permanent Redirect for HTTP to HTTPS in production
+  if (!isLocal && proto === "http") {
+    const targetUrl = new URL(
+      req.nextUrl.pathname + req.nextUrl.search,
+      `https://${host}`
+    );
+    return NextResponse.redirect(targetUrl, 301);
+  }
+
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
   const role = req.auth?.user?.role;

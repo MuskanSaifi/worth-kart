@@ -7,13 +7,26 @@ import {
 import type { OrderStatus } from "@/lib/order-status";
 import { transitionOrderStatus } from "@/lib/order-lifecycle";
 
+/** Shiprocket "Test Webhook" often sends GET — must return 200. */
+export async function GET() {
+  return NextResponse.json({ ok: true, message: "WorthKart courier webhook ready" });
+}
+
 /**
- * Shiprocket tracking webhook.
- * Configure in Shiprocket panel to POST here (use ngrok URL on localhost).
+ * Shiprocket tracking webhook (POST).
+ * Live URL (no forbidden keywords): /api/shipping/courier/webhook
  */
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as Record<string, unknown>;
+    let body: Record<string, unknown> = {};
+    const raw = await req.text();
+    if (raw.trim()) {
+      try {
+        body = JSON.parse(raw) as Record<string, unknown>;
+      } catch {
+        return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+      }
+    }
 
     const awb =
       (typeof body.awb === "string" && body.awb) ||
@@ -35,8 +48,9 @@ export async function POST(req: NextRequest) {
       (typeof body.current_status_id === "string" && body.current_status_id) ||
       "";
 
+    // Test ping / empty payload — accept so Shiprocket panel test passes
     if (!awb && !shipmentId) {
-      return NextResponse.json({ error: "Missing awb or shipment_id" }, { status: 400 });
+      return NextResponse.json({ ok: true, message: "Webhook reachable", test: true });
     }
 
     const nextStatus = mapShiprocketStatusToOrderStatus(rawStatus || "");
@@ -103,7 +117,8 @@ export async function POST(req: NextRequest) {
       from: item.order.status,
       to: nextStatus,
     });
-  } catch {
+  } catch (e) {
+    console.error("[courier/webhook]", e);
     return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
   }
 }

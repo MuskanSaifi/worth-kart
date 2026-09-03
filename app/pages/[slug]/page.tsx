@@ -13,6 +13,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: page.seoTitle || `${page.title} | WorthKart`,
     description: page.seoDescription || undefined,
+    alternates: {
+      canonical: `/pages/${slug}`,
+    },
   };
 }
 

@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { otpVerifySchema } from "@/lib/validations";
 import { verifyOtpVia2Factor, isTwoFactorConfigured } from "@/lib/two-factor";
-import { isTwoFactorSessionCode } from "@/lib/otp-send";
+import {
+  isTwoFactorSessionCode,
+  DEMO_REVIEW_PHONE_NUMBERS,
+  DEMO_REVIEW_OTP,
+} from "@/lib/otp-send";
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,6 +23,24 @@ export async function POST(req: NextRequest) {
     const normalizedTarget =
       type === "email" ? target.trim().toLowerCase() : target.replace(/\D/g, "").slice(-10);
     const cleanedCode = String(code).replace(/\D/g, "");
+
+    // Google Play Reviewer / QA bypass
+    if (
+      type === "phone" &&
+      DEMO_REVIEW_PHONE_NUMBERS.includes(normalizedTarget) &&
+      cleanedCode === DEMO_REVIEW_OTP
+    ) {
+      await prisma.otp.create({
+        data: {
+          target: normalizedTarget,
+          type: "phone",
+          code: DEMO_REVIEW_OTP,
+          verified: true,
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        },
+      });
+      return NextResponse.json({ success: true, verified: true });
+    }
 
     // Already verified in the last 10 minutes → treat as success (retry-safe)
     const recentlyVerified = await prisma.otp.findFirst({

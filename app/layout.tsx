@@ -12,8 +12,42 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "WorthKart - India's Biggest Shopping Destination",
-  description: "Shop online for electronics, fashion, home & more. Best deals, best brands, best prices.",
+  metadataBase: new URL("https://worthkart.in"),
+  title: {
+    default: "WorthKart - India's Biggest Shopping Destination",
+    template: "%s | WorthKart",
+  },
+  description:
+    "Shop online for electronics, fashion, home & more. Best deals, best brands, best prices.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_IN",
+    url: "https://worthkart.in",
+    siteName: "WorthKart",
+    title: "WorthKart - India's Biggest Shopping Destination",
+    description:
+      "Shop online for electronics, fashion, home & more. Best deals, best brands, best prices.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "WorthKart - India's Biggest Shopping Destination",
+    description:
+      "Shop online for electronics, fashion, home & more. Best deals, best brands, best prices.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
 };
 
 export default function RootLayout({
