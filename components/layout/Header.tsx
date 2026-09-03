@@ -83,8 +83,8 @@ export async function Header() {
             <Phone size={16} className="text-primary" />
             <div className="leading-tight">
               <p className="text-[11px] text-muted">Support</p>
-              <a href="tel:9315804600" className="text-xs font-semibold hover:text-primary">
-                9315804600
+              <a href="tel:8130880308" className="text-xs font-semibold hover:text-primary">
+                8130880308
               </a>
             </div>
           </div>

@@ -6,6 +6,7 @@ import { buyerLoginSchema, loginSchema, sellerLoginSchema } from "@/lib/validati
 import { authConfig } from "@/lib/auth.config";
 import { isOtpVerifiedRecently } from "@/lib/otp-check";
 import { getOrCreateBuyerByPhone, normalizePhone } from "@/lib/app-auth";
+import { getAdminOtpPhone } from "@/lib/admin-otp-phone";
 import type { Role } from "@/app/generated/prisma/client";
 
 declare module "next-auth" {
@@ -92,7 +93,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const valid = await bcrypt.compare(parsed.data.password, user.password);
           if (!valid) return null;
 
-          const phone = user.phone?.replace(/\D/g, "").slice(-10);
+          const phone = getAdminOtpPhone(user.phone);
           const phoneOk = phone
             ? await isOtpVerifiedRecently(phone, "phone", LOGIN_OTP_WINDOW_MINUTES)
             : false;

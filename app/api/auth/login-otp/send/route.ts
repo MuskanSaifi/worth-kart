@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { buyerLoginSchema, loginSchema, sellerLoginSchema } from "@/lib/validations";
 import { sendAndStoreOtp } from "@/lib/otp-send";
+import { getAdminOtpPhone } from "@/lib/admin-otp-phone";
 
 /**
  * Buyer & Seller: mobile number + OTP.
@@ -120,8 +121,8 @@ export async function POST(req: NextRequest) {
       if (!valid) {
         return NextResponse.json({ error: "Invalid admin email or password" }, { status: 401 });
       }
-      const phone = user.phone?.replace(/\D/g, "").slice(-10);
-      const usePhone = Boolean(phone && /^[6-9]\d{9}$/.test(phone));
+      const phone = getAdminOtpPhone(user.phone);
+      const usePhone = Boolean(phone);
       type = usePhone ? "phone" : "email";
       target = usePhone ? phone! : user.email;
     }

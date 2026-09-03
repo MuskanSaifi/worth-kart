@@ -153,6 +153,73 @@ async function main() {
     },
   });
 
+  const beautyPhoneOwner = await prisma.user.findUnique({
+    where: { phone: "9315604600" },
+  });
+  let beautySellerUser;
+  if (beautyPhoneOwner && beautyPhoneOwner.role !== "ADMIN") {
+    beautySellerUser = await prisma.user.update({
+      where: { id: beautyPhoneOwner.id },
+      data: {
+        role: "SELLER",
+        phoneVerified: true,
+        emailVerified: true,
+      },
+    });
+  } else {
+    if (beautyPhoneOwner?.role === "ADMIN") {
+      await prisma.user.update({
+        where: { id: beautyPhoneOwner.id },
+        data: { phone: `90${Date.now().toString().slice(-8)}` },
+      });
+    }
+    beautySellerUser = await prisma.user.upsert({
+      where: { email: "beauty@worthkart.com" },
+      update: {
+        phone: "9315604600",
+        role: "SELLER",
+        name: "Glow Beauty Store",
+        phoneVerified: true,
+        emailVerified: true,
+      },
+      create: {
+        name: "Glow Beauty Store",
+        email: "beauty@worthkart.com",
+        phone: "9315604600",
+        password: sellerPass,
+        role: "SELLER",
+        emailVerified: true,
+        phoneVerified: true,
+      },
+    });
+  }
+
+  const beautySeller = await prisma.sellerProfile.upsert({
+    where: { userId: beautySellerUser.id },
+    update: {
+      businessName: "Glow Beauty Store",
+      status: "APPROVED",
+      city: "New Delhi",
+      state: "Delhi",
+      pincode: "110017",
+      pickupAddress: "Shop 8, Malviya Nagar Market, New Delhi",
+    },
+    create: {
+      userId: beautySellerUser.id,
+      businessName: "Glow Beauty Store",
+      businessType: "proprietorship",
+      gstNumber: "07AABCG4455E1Z8",
+      gstLegalName: "Glow Beauty Store",
+      city: "New Delhi",
+      state: "Delhi",
+      pincode: "110017",
+      pickupAddress: "Shop 8, Malviya Nagar Market, New Delhi",
+      status: "APPROVED",
+      rating: 4.4,
+      totalSales: 0,
+    },
+  });
+
   const catMap = await seedCategories(prisma);
   const categoryCount = await prisma.category.count();
   console.log(`   Categories: ${categoryCount} seeded`);
@@ -161,7 +228,7 @@ async function main() {
     name: string; slug: string; description: string;
     price: number; mrp: number; stock: number; brand: string;
     categorySlug: string; isDeal?: boolean; isFeatured?: boolean;
-    sellerId?: "fashion"; image: string;
+    sellerId?: "fashion" | "beauty"; image: string;
   }> = [
     {
       name: "boAt Wave Call 2 Smartwatch",
@@ -209,7 +276,62 @@ async function main() {
       description: "Long-lasting matte finish lipstick with intense color payoff.",
       price: 349, mrp: 750, stock: 300, brand: "Lakme",
       categorySlug: "beauty-makeup-lipstick", isDeal: true,
+      sellerId: "beauty",
       image: "https://images.unsplash.com/photo-1631214524020-7e18db9a8f92?w=400&h=400&fit=crop",
+    },
+    {
+      name: "Maybelline Superstay Matte Ink Lipstick",
+      slug: "maybelline-superstay-matte-ink-lipstick",
+      description: "Long-wear liquid matte lipstick. Intense colour, up to 16 hours.",
+      price: 549, mrp: 799, stock: 220, brand: "Maybelline",
+      categorySlug: "beauty-makeup-lipstick", isDeal: true, isFeatured: true,
+      sellerId: "beauty",
+      image: "https://images.unsplash.com/photo-1586495777744-4413f210325b?w=400&h=400&fit=crop",
+    },
+    {
+      name: "Lakme 9 to 5 Primer + Matte Foundation",
+      slug: "lakme-9to5-primer-matte-foundation",
+      description: "Matte foundation with built-in primer. Medium coverage, non-drying.",
+      price: 449, mrp: 725, stock: 180, brand: "Lakme",
+      categorySlug: "beauty-makeup-face", isDeal: true,
+      sellerId: "beauty",
+      image: "https://images.unsplash.com/photo-1522335789203-aabd1fc37da1?w=400&h=400&fit=crop",
+    },
+    {
+      name: "Neutrogena Hydro Boost Water Gel",
+      slug: "neutrogena-hydro-boost-water-gel",
+      description: "Oil-free hyaluronic acid gel moisturizer for dehydrated skin.",
+      price: 799, mrp: 1099, stock: 160, brand: "Neutrogena",
+      categorySlug: "beauty-skincare-moisturizers", isDeal: true, isFeatured: true,
+      sellerId: "beauty",
+      image: "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400&h=400&fit=crop",
+    },
+    {
+      name: "Minimalist SPF 50 PA++++ Sunscreen",
+      slug: "minimalist-spf-50-sunscreen",
+      description: "Lightweight no-white-cast sunscreen. Broad spectrum SPF 50.",
+      price: 399, mrp: 499, stock: 250, brand: "Minimalist",
+      categorySlug: "beauty-skincare-sunscreen", isDeal: true, isFeatured: true,
+      sellerId: "beauty",
+      image: "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=400&h=400&fit=crop",
+    },
+    {
+      name: "Mamaearth Vitamin C Face Wash",
+      slug: "mamaearth-vitamin-c-face-wash",
+      description: "Brightening face wash with Vitamin C and turmeric. Gentle daily cleanser.",
+      price: 249, mrp: 349, stock: 300, brand: "Mamaearth",
+      categorySlug: "beauty-skincare-moisturizers", isDeal: true,
+      sellerId: "beauty",
+      image: "https://images.unsplash.com/photo-1571781926291-c477ebfd024b?w=400&h=400&fit=crop",
+    },
+    {
+      name: "Plum Green Tea Toner",
+      slug: "plum-green-tea-toner",
+      description: "Alcohol-free toner for oily and acne-prone skin. Tightens pores.",
+      price: 329, mrp: 490, stock: 190, brand: "Plum",
+      categorySlug: "beauty-skincare-moisturizers", isDeal: true,
+      sellerId: "beauty",
+      image: "https://images.unsplash.com/photo-1570194065650-d99fb4bedf0a?w=400&h=400&fit=crop",
     },
     {
       name: "Sony WH-1000XM5 Headphones",
@@ -370,7 +492,12 @@ async function main() {
 
   for (const p of products) {
     const discount = Math.round(((p.mrp - p.price) / p.mrp) * 100);
-    const productSellerId = p.sellerId === "fashion" ? fashionSeller.id : seller.id;
+    const productSellerId =
+      p.sellerId === "fashion"
+        ? fashionSeller.id
+        : p.sellerId === "beauty"
+          ? beautySeller.id
+          : seller.id;
     const product = await prisma.product.upsert({
       where: { slug: p.slug },
       update: {
@@ -381,6 +508,7 @@ async function main() {
         discount,
         stock: p.stock,
         brand: p.brand,
+        sellerId: productSellerId,
         isDeal: p.isDeal || false,
         isFeatured: p.isFeatured || false,
       },
@@ -600,6 +728,7 @@ async function main() {
   console.log("   Buyer:  buyer@worthkart.com / Buyer@123");
   console.log("   Seller: seller@worthkart.com / Seller@123");
   console.log("   Fashion Seller: fashion@worthkart.com / Seller@123");
+  console.log("   Beauty Seller: beauty@worthkart.com · phone 9315604600");
   console.log("   Admin:  admin@worthkart.com / Admin@123");
 }
 
