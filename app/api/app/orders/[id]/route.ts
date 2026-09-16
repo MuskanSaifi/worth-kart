@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import {
   canBuyerCancel,
   canBuyerRequestReturn,
+  transitionOrderStatus,
+  verifyDeliveryOtp,
 } from "@/lib/order-lifecycle";
 import { canDownloadOrderInvoice } from "@/lib/tax-invoice";
 import { cancelBuyerOrder } from "@/lib/order-cancel";
@@ -86,6 +88,41 @@ export async function PATCH(
             : 500;
         return NextResponse.json({ error: message }, { status: status || 500 });
       }
+    }
+
+    const order = await prisma.order.findFirst({
+      where: { id, userId: user.id },
+      include: { items: true },
+    });
+    if (!order) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    if (action === "confirm_delivery") {
+      const otp = String(body.otp || "");
+      if (order.status !== "OUT_FOR_DELIVERY") {
+        return NextResponse.json(
+          { error: "Order is not out for delivery" },
+          { status: 400 }
+        );
+      }
+      const ok = await verifyDeliveryOtp(id, otp);
+      if (!ok) {
+        return NextResponse.json(
+          { error: "Invalid or expired delivery OTP" },
+          { status: 400 }
+        );
+      }
+
+      await transitionOrderStatus({
+        orderId: id,
+        status: "DELIVERED",
+        source: "buyer",
+        title: "Delivered",
+        message: "Delivery confirmed with OTP.",
+      });
+
+      return NextResponse.json({ success: true, status: "DELIVERED" });
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });

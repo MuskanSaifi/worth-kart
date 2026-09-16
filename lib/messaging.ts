@@ -1,6 +1,4 @@
-/**
- * Transactional SMS / WhatsApp via 2Factor or Meta Cloud API.
- */
+import { getTwoFactorApiKey } from "@/lib/two-factor";
 
 function normalizeIndianPhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -11,7 +9,7 @@ export async function sendTransactionalSms(
   phone: string,
   message: string
 ): Promise<{ success: boolean; error?: string }> {
-  const apiKey = process.env.TWO_FACTOR_API_KEY;
+  const apiKey = getTwoFactorApiKey();
   if (!apiKey) {
     console.warn("[sms] TWO_FACTOR_API_KEY missing — skipping SMS");
     return { success: false, error: "SMS not configured" };
@@ -117,7 +115,7 @@ export async function sendWhatsAppAlert(
     }
   }
 
-  const apiKey = process.env.TWO_FACTOR_API_KEY;
+  const apiKey = getTwoFactorApiKey();
   if (apiKey && process.env.TWO_FACTOR_WHATSAPP_ENABLED === "true") {
     try {
       const url = `https://2factor.in/API/V1/${apiKey}/ADDON_SERVICES/SEND/WAPP`;

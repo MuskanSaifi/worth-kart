@@ -30,7 +30,15 @@ export function maskEmail(email: string): string {
 }
 
 export function isTwoFactorConfigured(): boolean {
-  return !!process.env.TWO_FACTOR_API_KEY;
+  return !!getTwoFactorApiKey();
+}
+
+export function getTwoFactorApiKey(): string {
+  const raw = (process.env.TWO_FACTOR_API_KEY || "").trim();
+  const uuid = raw.match(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+  );
+  return uuid ? uuid[0] : raw;
 }
 
 async function call2Factor(url: string): Promise<{ ok: boolean; sessionId?: string; error?: string }> {
@@ -84,7 +92,7 @@ export async function sendSmsOtp(phone: string): Promise<{
   sessionId?: string;
   error?: string;
 }> {
-  const apiKey = process.env.TWO_FACTOR_API_KEY;
+  const apiKey = getTwoFactorApiKey();
   const template = process.env.TWO_FACTOR_OTP_TEMPLATE || "OTPtemplate";
 
   if (!apiKey) {
@@ -98,18 +106,21 @@ export async function sendSmsOtp(phone: string): Promise<{
 
   const attempts = [
     `https://2factor.in/API/V1/${apiKey}/SMS/${mobile}/AUTOGEN3/${template}`,
-    `https://2factor.in/API/V1/${apiKey}/SMS/+91${mobile}/AUTOGEN3/${template}`,
+    `https://2factor.in/API/V1/${apiKey}/SMS/91${mobile}/AUTOGEN3/${template}`,
     `https://2factor.in/API/V1/${apiKey}/SMS/${mobile}/AUTOGEN3`,
   ];
 
+  let lastError = "Failed to send SMS OTP. Check 2Factor template & DLT.";
   for (const url of attempts) {
     const result = await call2Factor(url);
     if (result.ok && result.sessionId) {
       return { success: true, sessionId: result.sessionId };
     }
+    if (result.error) lastError = result.error;
   }
 
-  return { success: false, error: "Failed to send SMS OTP. Check 2Factor template & DLT." };
+  console.warn("[2factor] SMS OTP failed:", lastError);
+  return { success: false, error: lastError };
 }
 
 /** Send 4-digit OTP via Email (AUTOGEN3) from info@worthkart.in */
@@ -118,7 +129,7 @@ export async function sendEmailOtp(email: string): Promise<{
   sessionId?: string;
   error?: string;
 }> {
-  const apiKey = process.env.TWO_FACTOR_API_KEY;
+  const apiKey = getTwoFactorApiKey();
   const template =
     process.env.TWO_FACTOR_EMAIL_TEMPLATE ||
     process.env.TWO_FACTOR_OTP_TEMPLATE ||
@@ -181,7 +192,7 @@ export async function sendEmailOtp(email: string): Promise<{
 
 /** Verify OTP (works for SMS & Email session IDs). AUTOGEN3 → prefer VERIFY3. */
 export async function verifyOtpVia2Factor(sessionId: string, otp: string): Promise<boolean> {
-  const apiKey = process.env.TWO_FACTOR_API_KEY;
+  const apiKey = getTwoFactorApiKey();
   const cleanedOtp = String(otp || "").replace(/\D/g, "");
   if (!apiKey || !sessionId || !cleanedOtp) return false;
 
