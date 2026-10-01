@@ -5,7 +5,7 @@ import { isDemoReviewOtp } from "@/lib/demo-review";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as { phone?: string };
+    const body = (await req.json()) as { phone?: string; code?: string };
     const phone = normalizePhone(body.phone || "");
     if (!/^[6-9]\d{9}$/.test(phone)) {
       return NextResponse.json({ error: "Enter valid 10-digit Indian mobile number" }, { status: 400 });

@@ -1,15 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  webpack: (config, { webpack }) => {
-    // Webpack treats "node:crypto" as an unknown URL scheme (UnhandledSchemeError).
-    config.plugins.push(
-      new webpack.NormalModuleReplacementPlugin(/^node:/, (resource: { request: string }) => {
-        resource.request = resource.request.replace(/^node:/, "");
-      })
-    );
-    return config;
-  },
+  // Next 16 production `next build` uses Turbopack. An empty turbopack
+  // block is required so a leftover webpack() config does not fail the build.
+  turbopack: {},
+  serverExternalPackages: ["@prisma/client", "prisma", "bcryptjs"],
   // Allow LAN IPs to access Next.js dev resources (needed for app/Cashfree SDK on phone)
   allowedDevOrigins: [
     "localhost:8081",
