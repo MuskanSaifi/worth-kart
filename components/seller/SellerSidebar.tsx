@@ -22,6 +22,7 @@ import {
   Store,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
+import { Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
@@ -83,6 +84,12 @@ export function SellerSidebar({ businessName, noticeCount = 0 }: SellerSidebarPr
             >
               <LogOut size={14} /> Logout
             </button>
+            <Link
+              href="/account"
+              className="w-full text-left px-3 py-2 hover:bg-white/5 text-red-400 flex items-center gap-2"
+            >
+              <Trash2 size={14} /> Delete account
+            </Link>
           </div>
         )}
       </div>

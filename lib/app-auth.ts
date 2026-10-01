@@ -1,4 +1,4 @@
-import crypto from "node:crypto";
+import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
@@ -56,7 +56,7 @@ export async function getOrCreateBuyerByPhone(phone: string) {
     return existing;
   }
 
-  const isDemo = normalized === "9999999999" || normalized === "9876543210";
+  const isDemo = normalized === "9999999999" || normalized === "9876543210" || normalized === "9876543211";
   const internalEmail = `buyer-${normalized}@users.worthkart.in`;
   const hashed = await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 12);
   return prisma.user.create({

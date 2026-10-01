@@ -126,23 +126,56 @@ export default function CheckoutPage() {
   };
 
   const saveAddress = async () => {
-    if (
-      !newAddress.name ||
-      !newAddress.phone ||
-      !newAddress.line1 ||
-      !newAddress.line2 ||
-      !newAddress.city ||
-      !newAddress.state ||
-      !newAddress.pincode
-    ) {
-      setError("Please fill name, phone, house and area / sector");
+    const name = newAddress.name.trim();
+    const phone = newAddress.phone.replace(/\D/g, "").slice(-10);
+    const line1 = newAddress.line1.trim();
+    const line2 = newAddress.line2.trim();
+    const city = newAddress.city.trim();
+    const state = newAddress.state.trim();
+    const pincode = newAddress.pincode.replace(/\D/g, "").slice(0, 6);
+
+    if (!name) {
+      setError("Enter your name");
+      return;
+    }
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+      setError("Enter a valid 10-digit mobile number");
+      return;
+    }
+    if (!line1) {
+      setError("Enter house / flat / floor number");
+      return;
+    }
+    if (!line2) {
+      setError("Enter area / sector / locality");
+      return;
+    }
+    if (!city) {
+      setError("Enter city");
+      return;
+    }
+    if (!state) {
+      setError("Enter state");
+      return;
+    }
+    if (!/^\d{6}$/.test(pincode)) {
+      setError("Enter a valid 6-digit pincode");
       return;
     }
     setError("");
     const res = await fetch("/api/addresses", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...newAddress, isDefault: addresses.length === 0 }),
+      body: JSON.stringify({
+        name,
+        phone,
+        line1,
+        line2,
+        city,
+        state,
+        pincode,
+        isDefault: addresses.length === 0,
+      }),
     });
     const data = await res.json();
     if (res.ok) {
@@ -164,7 +197,10 @@ export default function CheckoutPage() {
   };
 
   const placeOrder = async () => {
-    if (!selectedAddress) return;
+    if (!selectedAddress) {
+      setError("Save a delivery address first");
+      return;
+    }
     setLoading(true);
     setError("");
 
@@ -335,12 +371,16 @@ export default function CheckoutPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowAddressForm(false)}
+                    onClick={() => {
+                      setShowAddressForm(false);
+                      setError("");
+                    }}
                     className="px-4 py-2 rounded text-sm border border-border"
                   >
                     Cancel
                   </button>
                 </div>
+                {error && <p className="text-sm text-red-600">{error}</p>}
               </div>
             )}
 

@@ -9,12 +9,16 @@ import {
   maskEmail,
   getTwoFactorSenderEmail,
 } from "@/lib/two-factor";
+import { DEMO_REVIEW_OTP, DEMO_REVIEW_PHONE_NUMBERS } from "@/lib/demo-review";
 
 export type OtpChannel = "email" | "phone";
 
-/** Demo test phones for Google Play Review / QA (always uses static OTP: 1234) */
-export const DEMO_REVIEW_PHONE_NUMBERS = ["9999999999", "9876543210"];
-export const DEMO_REVIEW_OTP = "1234";
+export {
+  DEMO_REVIEW_PHONE_NUMBERS,
+  DEMO_REVIEW_OTP,
+  DEMO_BUYER_PHONES,
+  DEMO_SELLER_PHONE,
+} from "@/lib/demo-review";
 
 function normalizeTarget(target: string, type: OtpChannel): string {
   return type === "email"

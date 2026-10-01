@@ -153,13 +153,19 @@ export const productSchema = z.object({
 });
 
 export const addressSchema = z.object({
-  name: z.string().min(2),
-  phone: z.string().regex(/^[6-9]\d{9}$/),
-  line1: z.string().min(5),
-  line2: z.string().optional(),
-  city: z.string().min(2),
-  state: z.string().min(2),
-  pincode: z.string().regex(/^\d{6}$/),
+  name: z.string().trim().min(2, "Enter your name"),
+  phone: z
+    .string()
+    .transform((v) => v.replace(/\D/g, "").slice(-10))
+    .pipe(z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number")),
+  line1: z.string().trim().min(2, "Enter house / flat / floor number"),
+  line2: z.string().trim().optional().or(z.literal("")),
+  city: z.string().trim().min(2, "Enter city"),
+  state: z.string().trim().min(2, "Enter state"),
+  pincode: z
+    .string()
+    .transform((v) => v.replace(/\D/g, "").slice(0, 6))
+    .pipe(z.string().regex(/^\d{6}$/, "Enter a valid 6-digit pincode")),
   isDefault: z.boolean().optional(),
 });
 
@@ -169,8 +175,10 @@ export const reviewSchema = z.object({
 });
 
 export const checkoutSchema = z.object({
-  addressId: z.string().min(1),
-  paymentMethod: z.enum(["COD", "ONLINE", "UPI", "CARD", "WALLET"]),
+  addressId: z.string().min(1, "Select a delivery address"),
+  paymentMethod: z.enum(["COD", "ONLINE", "UPI", "CARD", "WALLET"], {
+    message: "Select a payment method",
+  }),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;

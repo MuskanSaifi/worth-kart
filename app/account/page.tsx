@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { EmailVerification } from "@/components/account/EmailVerification";
 import { BuyerProfileForm } from "@/components/account/BuyerProfileForm";
 import { SavedAddressesManager } from "@/components/account/SavedAddressesManager";
+import { DeleteAccountButton } from "@/components/account/DeleteAccountButton";
 
 export default async function AccountPage() {
   const session = await auth();
@@ -93,6 +94,12 @@ export default async function AccountPage() {
         defaultName={user.name}
         defaultPhone={user.phone}
       />
+
+      {user.role !== "ADMIN" ? (
+        <div className="mt-6">
+          <DeleteAccountButton />
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import crypto from "node:crypto";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { buyerRegisterSchema } from "@/lib/validations";
 import { isOtpVerifiedRecently } from "@/lib/otp-check";

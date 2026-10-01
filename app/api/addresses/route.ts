@@ -20,7 +20,16 @@ export async function POST(req: NextRequest) {
   try {
     const session = await requireAuth();
     const body = await req.json();
-    const parsed = addressSchema.safeParse(body);
+    const parsed = addressSchema.safeParse({
+      ...body,
+      name: String(body.name || "").trim(),
+      phone: String(body.phone || "").replace(/\D/g, "").slice(-10),
+      line1: String(body.line1 || "").trim(),
+      line2: body.line2 ? String(body.line2).trim() : "",
+      city: String(body.city || "").trim(),
+      state: String(body.state || "").trim(),
+      pincode: String(body.pincode || "").replace(/\D/g, "").slice(0, 6),
+    });
     if (!parsed.success) {
       return NextResponse.json(
         { error: parsed.error.issues[0].message },

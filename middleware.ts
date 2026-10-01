@@ -4,7 +4,15 @@ import { NextResponse } from "next/server";
 
 const { auth } = NextAuth(authConfig);
 
-export default auth((req) => {
+const authProxy = auth((req) => {
+  const { pathname } = req.nextUrl;
+
+  // Let App Router route.ts handlers run. If this file skips /api entirely,
+  // Next 16 treats those URLs as pages and returns HTML 404 (OTP, session, products).
+  if (pathname.startsWith("/api")) {
+    return NextResponse.next();
+  }
+
   const host =
     req.headers.get("x-forwarded-host") ||
     req.headers.get("host") ||
@@ -51,7 +59,6 @@ export default auth((req) => {
     return NextResponse.redirect(targetUrl, 301);
   }
 
-  const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
   const role = req.auth?.user?.role;
 
@@ -93,6 +100,8 @@ export default auth((req) => {
   return NextResponse.next();
 });
 
+export default authProxy;
+
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)"],
 };
