@@ -1,19 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAppSessionToken, getOrCreateBuyerByPhone, normalizePhone } from "@/lib/app-auth";
 import { isOtpVerifiedRecently } from "@/lib/otp-check";
-import { isDemoReviewOtp } from "@/lib/demo-review";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as { phone?: string; code?: string };
+    const body = (await req.json()) as { phone?: string };
     const phone = normalizePhone(body.phone || "");
     if (!/^[6-9]\d{9}$/.test(phone)) {
       return NextResponse.json({ error: "Enter valid 10-digit Indian mobile number" }, { status: 400 });
     }
 
-    const phoneOk =
-      isDemoReviewOtp(phone, body.code || "") ||
-      (await isOtpVerifiedRecently(phone, "phone", 10));
+    const phoneOk = await isOtpVerifiedRecently(phone, "phone", 10);
     if (!phoneOk) {
       return NextResponse.json({ error: "Please verify OTP again to continue" }, { status: 401 });
     }

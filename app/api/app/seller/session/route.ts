@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createAppSessionToken, normalizePhone } from "@/lib/app-auth";
 import { isOtpVerifiedRecently } from "@/lib/otp-check";
-import { DEMO_SELLER_PHONE, ensureDemoReviewSeller, isDemoReviewOtp } from "@/lib/demo-review";
 
 function sellerPayload(user: {
   id: string;
@@ -31,13 +30,10 @@ function sellerPayload(user: {
   };
 }
 
-/**
- * Create a mobile Seller Hub session after phone OTP verify.
- * App Review: { phone: "9876543211", code: "1234" } logs in without SMS.
- */
+/** Create a mobile Seller Hub session after phone OTP verify. */
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as { phone?: string; code?: string };
+    const body = (await req.json()) as { phone?: string };
     const phone = normalizePhone(body.phone || "");
     if (!/^[6-9]\d{9}$/.test(phone)) {
       return NextResponse.json(
@@ -46,24 +42,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const demoLogin = isDemoReviewOtp(phone, body.code || "");
-
-    if (!demoLogin) {
-      const phoneOk = await isOtpVerifiedRecently(phone, "phone", 15);
-      if (!phoneOk) {
-        return NextResponse.json(
-          { error: "Please verify OTP again to continue" },
-          { status: 401 }
-        );
-      }
-    }
-
-    if (phone === DEMO_SELLER_PHONE) {
-      try {
-        await ensureDemoReviewSeller();
-      } catch (e) {
-        console.error("[app/seller/session] ensureDemoReviewSeller", e);
-      }
+    const phoneOk = await isOtpVerifiedRecently(phone, "phone", 15);
+    if (!phoneOk) {
+      return NextResponse.json(
+        { error: "Please verify OTP again to continue" },
+        { status: 401 }
+      );
     }
 
     const user = await prisma.user.findUnique({

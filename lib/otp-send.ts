@@ -9,16 +9,7 @@ import {
   maskEmail,
   getTwoFactorSenderEmail,
 } from "@/lib/two-factor";
-import { DEMO_REVIEW_OTP, DEMO_REVIEW_PHONE_NUMBERS } from "@/lib/demo-review";
-
 export type OtpChannel = "email" | "phone";
-
-export {
-  DEMO_REVIEW_PHONE_NUMBERS,
-  DEMO_REVIEW_OTP,
-  DEMO_BUYER_PHONES,
-  DEMO_SELLER_PHONE,
-} from "@/lib/demo-review";
 
 function normalizeTarget(target: string, type: OtpChannel): string {
   return type === "email"
@@ -49,26 +40,6 @@ export async function sendAndStoreOtp(
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
   await prisma.otp.deleteMany({ where: { target: normalizedTarget, type } });
-
-  // Fast-track demo numbers for Google Play Reviewers & QA
-  if (type === "phone" && DEMO_REVIEW_PHONE_NUMBERS.includes(normalizedTarget)) {
-    await prisma.otp.create({
-      data: {
-        target: normalizedTarget,
-        type,
-        code: DEMO_REVIEW_OTP,
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
-      },
-    });
-    return {
-      success: true,
-      message: `OTP sent to ${maskPhone(normalizedTarget)}`,
-      target: normalizedTarget,
-      type,
-      maskedTarget: maskPhone(normalizedTarget),
-      devOtp: DEMO_REVIEW_OTP,
-    };
-  }
 
   if (type === "phone") {
     if (!isTwoFactorConfigured()) {

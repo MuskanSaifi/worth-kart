@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { buyerLoginSchema, loginSchema, sellerLoginSchema } from "@/lib/validations";
 import { sendAndStoreOtp } from "@/lib/otp-send";
 import { getAdminOtpPhone } from "@/lib/admin-otp-phone";
-import { DEMO_SELLER_PHONE, ensureDemoReviewSeller } from "@/lib/demo-review";
 
 /**
  * Buyer & Seller: mobile number + OTP.
@@ -44,13 +43,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
       }
       const phone = parsed.data.phone.replace(/\D/g, "").slice(-10);
-      if (phone === DEMO_SELLER_PHONE) {
-        try {
-          await ensureDemoReviewSeller();
-        } catch (e) {
-          console.error("[login-otp/send] ensureDemoReviewSeller", e);
-        }
-      }
       const user = await prisma.user.findUnique({
         where: { phone },
         include: { sellerProfile: { select: { id: true } } },
