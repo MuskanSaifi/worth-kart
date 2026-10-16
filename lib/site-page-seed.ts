@@ -39,7 +39,9 @@ export const DEFAULT_SITE_PAGES: SeedSitePage[] = [
     contentHtml:
       wrap("Get in Touch", [
         "For order, payment, or delivery queries, visit Help → FAQ or raise a ticket from your account.",
+        "Legal entity: WORTHKART MARKETPLACE PRIVATE LIMITED. Brand: WorthKart (https://worthkart.in).",
         "Email: support@worthkart.in",
+        "Phone: +91 8130880308",
         "Business hours: Monday to Saturday, 9:00 AM – 6:00 PM IST.",
       ]),
   },
@@ -87,7 +89,7 @@ export const DEFAULT_SITE_PAGES: SeedSitePage[] = [
       ]),
   },
   {
-    title: "Cancellation & Returns",
+    title: "Refunds & Cancellations",
     slug: "returns",
     section: "HELP",
     sortOrder: 2,
@@ -112,7 +114,7 @@ export const DEFAULT_SITE_PAGES: SeedSitePage[] = [
       "<h3>How do I become a seller?</h3><p>Click Become a Seller in the header and complete registration with GST and bank details.</p>",
   },
   {
-    title: "Terms of Use",
+    title: "Terms & Conditions",
     slug: "terms-of-use",
     section: "POLICY",
     sortOrder: 0,

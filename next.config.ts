@@ -72,6 +72,9 @@ const nextConfig: NextConfig = {
         destination: "https://worthkart.in/:path*",
         permanent: true,
       },
+      { source: "/pages/contact-us", destination: "/contact-us", permanent: true },
+      { source: "/pages/returns", destination: "/refunds-cancellations", permanent: true },
+      { source: "/pages/terms-of-use", destination: "/terms-and-conditions", permanent: true },
     ];
   },
   images: {

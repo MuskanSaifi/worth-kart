@@ -95,6 +95,19 @@ export default async function AccountPage() {
         defaultPhone={user.phone}
       />
 
+      <div className="mt-6 bg-card rounded-lg border border-border p-4 space-y-2">
+        <p className="text-sm font-semibold">Support</p>
+        <Link href="/contact-us" className="block text-sm text-primary hover:underline">
+          Contact Us
+        </Link>
+        <Link href="/refunds-cancellations" className="block text-sm text-primary hover:underline">
+          Refunds &amp; Cancellations
+        </Link>
+        <Link href="/terms-and-conditions" className="block text-sm text-primary hover:underline">
+          Terms &amp; Conditions
+        </Link>
+      </div>
+
       {user.role !== "ADMIN" ? (
         <div className="mt-6">
           <DeleteAccountButton />

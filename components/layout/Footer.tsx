@@ -2,6 +2,16 @@ import Link from "next/link";
 import { Share2, Globe, MessageCircle, Video } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { sitePagePath, type SitePageSection } from "@/lib/site-page-admin";
+import { COMPANY } from "@/lib/company";
+
+/** Exact titles Cashfree looks for when whitelisting the website. */
+const CASHFREE_LEGAL_LINKS = [
+  { label: "Contact Us", href: "/contact-us" },
+  { label: "Refunds & Cancellations", href: "/refunds-cancellations" },
+  { label: "Terms & Conditions", href: "/terms-and-conditions" },
+] as const;
+
+const HIDDEN_CMS_SLUGS = new Set(["contact-us", "returns", "terms-of-use"]);
 
 const FOOTER_SECTION_ORDER: SitePageSection[] = ["ABOUT", "HELP", "POLICY"];
 const FOOTER_SECTION_TITLES: Record<SitePageSection, string> = {
@@ -52,7 +62,7 @@ export async function Footer() {
   const pagesBySection = FOOTER_SECTION_ORDER.map((section) => ({
     title: FOOTER_SECTION_TITLES[section],
     links: footerPages
-      .filter((page) => page.section === section)
+      .filter((page) => page.section === section && !HIDDEN_CMS_SLUGS.has(page.slug))
       .map((page) => ({
         label: page.title,
         href: sitePagePath(page.slug),
@@ -76,7 +86,21 @@ export async function Footer() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-10">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
+          <div>
+            <h4 className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-4">
+              Important
+            </h4>
+            <ul className="space-y-2.5">
+              {CASHFREE_LEGAL_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href} className="text-sm hover:text-white transition-colors">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
           {pagesBySection.map((group) => (
             <div key={group.title}>
               <h4 className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-4">
@@ -118,8 +142,11 @@ export async function Footer() {
         </div>
 
         <div className="mt-10 pt-6 border-t border-gray-700 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm">
-            &copy; {new Date().getFullYear()} WorthKart. All rights reserved.
+          <p className="text-sm text-center md:text-left">
+            &copy; {new Date().getFullYear()} {COMPANY.legalName}. All rights reserved.
+            <span className="block text-xs text-gray-500 mt-1">
+              {COMPANY.brand} · {COMPANY.supportEmail} · +91 {COMPANY.phone}
+            </span>
           </p>
           <div className="flex items-center gap-4 text-sm">
             <Link href="#" className="hover:text-white transition-colors">
