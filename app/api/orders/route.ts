@@ -80,17 +80,16 @@ export async function POST(req: NextRequest) {
         : "COD";
 
     const isOnline = isOnlinePaymentMethod(paymentMethod);
-
-    if (isOnline && !isCashfreePgConfigured()) {
+    const cashfreeConfigError = isOnline ? getCashfreePgConfigError() : null;
+    if (isOnline && (!isCashfreePgConfigured() || cashfreeConfigError)) {
       return NextResponse.json(
-        { error: "Online payment is not configured. Please use Cash on Delivery." },
+        {
+          error:
+            cashfreeConfigError ||
+            "Online payment is not configured. Please use Cash on Delivery.",
+        },
         { status: 503 }
       );
-    }
-
-    const cashfreeConfigError = isOnline ? getCashfreePgConfigError() : null;
-    if (cashfreeConfigError) {
-      return NextResponse.json({ error: cashfreeConfigError }, { status: 503 });
     }
 
     const orderNumber = generateOrderNumber();

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createCashfreePgOrder, isOnlinePaymentMethod } from "@/lib/cashfree-pg";
 import {
   cashfreePgMode,
+  getAppBaseUrl,
   getCashfreePgConfigError,
   getRequestPublicOrigin,
   isCashfreePgConfigured,
@@ -20,13 +21,24 @@ type AppCheckoutBody = {
   items?: { productId?: string; quantity?: number }[];
 };
 
+function httpsCheckoutOrigin(publicOrigin: string) {
+  if (cashfreePgMode() !== "production") return publicOrigin.replace(/\/$/, "");
+  if (/^https:\/\//i.test(publicOrigin) && !/192\.168\.|10\.|localhost|127\.0\.0\.1/i.test(publicOrigin)) {
+    return publicOrigin.replace(/\/$/, "");
+  }
+  const configured = getAppBaseUrl();
+  if (/^https:\/\//i.test(configured)) return configured.replace(/\/$/, "");
+  return "https://worthkart.in";
+}
+
 function normalizeReturnUrl(
   returnUrl: string | undefined,
   orderNumber: string,
   publicOrigin: string
 ) {
   // Cashfree needs a reachable http(s) URL — never exp:// for phone testing.
-  let base = returnUrl?.trim() || `${publicOrigin}/app-pay/return`;
+  const origin = httpsCheckoutOrigin(publicOrigin);
+  let base = returnUrl?.trim() || `${origin}/app-pay/return`;
   let appReturnParam = "";
   try {
     const parsed = new URL(base);
@@ -35,11 +47,8 @@ function normalizeReturnUrl(
     /* keep base as-is */
   }
 
-  if (/^(exp|worthkart):\/\//i.test(base)) {
-    base = `${publicOrigin}/app-pay/return`;
-  } else if (/localhost|127\.0\.0\.1/i.test(base)) {
-    // Keep using website origin for Cashfree return; preserve Expo app_return bounce URL
-    base = `${publicOrigin}/app-pay/return`;
+  if (/^(exp|worthkart):\/\//i.test(base) || /localhost|127\.0\.0\.1|192\.168\.|10\./i.test(base)) {
+    base = `${origin}/app-pay/return`;
   }
 
   try {
@@ -142,16 +151,16 @@ export async function POST(req: NextRequest) {
         : "COD";
 
     const isOnline = isOnlinePaymentMethod(paymentMethod);
-    if (isOnline && !isCashfreePgConfigured()) {
+    const cashfreeConfigError = isOnline ? getCashfreePgConfigError() : null;
+    if (isOnline && (!isCashfreePgConfigured() || cashfreeConfigError)) {
       return NextResponse.json(
-        { error: "Online payment is not configured. Please use Cash on Delivery." },
+        {
+          error:
+            cashfreeConfigError ||
+            "Online payment is not configured. Please use Cash on Delivery.",
+        },
         { status: 503 }
       );
-    }
-
-    const cashfreeConfigError = isOnline ? getCashfreePgConfigError() : null;
-    if (cashfreeConfigError) {
-      return NextResponse.json({ error: cashfreeConfigError }, { status: 503 });
     }
 
     const orderNumber = generateOrderNumber();
@@ -229,6 +238,7 @@ export async function POST(req: NextRequest) {
 
     try {
       const publicOrigin = getRequestPublicOrigin(req);
+      const checkoutOrigin = httpsCheckoutOrigin(publicOrigin);
       const pgMode = cashfreePgMode() === "production" ? "production" : "sandbox";
       const pgOrder = await createCashfreePgOrder({
         orderId: order.orderNumber,
@@ -244,7 +254,7 @@ export async function POST(req: NextRequest) {
       // Cashfree hosted "#session_id=" URL is unreliable (esp. Expo web popups).
       // Open checkout via our Next.js bridge page + official JS SDK instead.
       const paymentPageUrl =
-        `${publicOrigin}/app-pay` +
+        `${checkoutOrigin}/app-pay` +
         `?session_id=${encodeURIComponent(pgOrder.payment_session_id)}` +
         `&mode=${encodeURIComponent(pgMode)}` +
         `&order_id=${encodeURIComponent(order.orderNumber)}`;

@@ -11,20 +11,34 @@ function AppPayReturnContent() {
   useEffect(() => {
     if (!orderId) return;
 
-    // Expo web / custom return: bounce to app checkout-return in the browser
-    if (appReturn) {
-      try {
-        const url = new URL(appReturn);
-        url.searchParams.set("order_id", orderId);
-        window.location.href = url.toString();
-        return;
-      } catch {
-        // fall through to deep link
+    const target = (() => {
+      if (appReturn) {
+        try {
+          const url = new URL(appReturn);
+          url.searchParams.set("order_id", orderId);
+          return url.toString();
+        } catch {
+          /* ignore */
+        }
       }
-    }
+      return `worthkart://checkout-return?order_id=${encodeURIComponent(orderId)}`;
+    })();
 
-    const deepLink = `worthkart://checkout-return?order_id=${encodeURIComponent(orderId)}`;
-    window.location.href = deepLink;
+    const bounce = () => {
+      try {
+        window.location.replace(target);
+      } catch {
+        window.location.href = target;
+      }
+    };
+
+    bounce();
+    const t1 = window.setTimeout(bounce, 400);
+    const t2 = window.setTimeout(bounce, 1200);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
   }, [orderId, appReturn]);
 
   const fallbackHref = (() => {

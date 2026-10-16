@@ -29,10 +29,50 @@ export function getRequestPublicOrigin(req: {
   return req.nextUrl.origin.replace(/\/$/, "");
 }
 
+function isLocalHostUrl(url: string) {
+  return /localhost|127\.0\.0\.1|192\.168\.|10\.\d+\.|172\.(1[6-9]|2\d|3[0-1])\./i.test(url);
+}
+
+/**
+ * Localhost / LAN → sandbox. Public HTTPS (worthkart.in) → live.
+ * CASHFREE_PG_ENV=sandbox|production still forces a mode if set.
+ */
+export function cashfreePgMode(): "sandbox" | "production" {
+  const forced = process.env.CASHFREE_PG_ENV?.toLowerCase();
+  if (forced === "sandbox" || forced === "test") return "sandbox";
+  if (forced === "production" || forced === "live") {
+    if (isLocalHostUrl(getAppBaseUrl())) return "sandbox";
+    return "production";
+  }
+  return isLocalHostUrl(getAppBaseUrl()) ? "sandbox" : "production";
+}
+
+function cashfreePgKeys() {
+  const live = cashfreePgMode() === "production";
+  const clientId = (
+    live
+      ? process.env.CASHFREE_PG_CLIENT_ID_LIVE ||
+        process.env.CASHFREE_PG_CLIENT_ID ||
+        process.env.CASHFREE_PG_CLIENT_ID_TEST
+      : process.env.CASHFREE_PG_CLIENT_ID_TEST ||
+        process.env.CASHFREE_PG_CLIENT_ID ||
+        process.env.CASHFREE_PG_CLIENT_ID_LIVE
+  )?.trim() || "";
+  const clientSecret = (
+    live
+      ? process.env.CASHFREE_PG_CLIENT_SECRET_LIVE ||
+        process.env.CASHFREE_PG_CLIENT_SECRET ||
+        process.env.CASHFREE_PG_CLIENT_SECRET_TEST
+      : process.env.CASHFREE_PG_CLIENT_SECRET_TEST ||
+        process.env.CASHFREE_PG_CLIENT_SECRET ||
+        process.env.CASHFREE_PG_CLIENT_SECRET_LIVE
+  )?.trim() || "";
+  return { clientId, clientSecret };
+}
+
 export function isCashfreePgConfigured(): boolean {
-  return !!(
-    process.env.CASHFREE_PG_CLIENT_ID && process.env.CASHFREE_PG_CLIENT_SECRET
-  );
+  const { clientId, clientSecret } = cashfreePgKeys();
+  return !!(clientId && clientSecret);
 }
 
 /** @deprecated Use isCashfreePgConfigured */
@@ -40,69 +80,36 @@ export function isCashfreeConfigured(): boolean {
   return isCashfreePgConfigured();
 }
 
-/** Infer sandbox vs production from the client secret suffix. */
 export function cashfreePgCredentialMode(): "sandbox" | "production" | null {
-  const secret = process.env.CASHFREE_PG_CLIENT_SECRET || "";
-  if (secret.includes("_prod_")) return "production";
-  if (secret.includes("_test_")) return "sandbox";
-  return null;
-}
-
-function cashfreePgEnvOverride(): "sandbox" | "production" | null {
-  const env = process.env.CASHFREE_PG_ENV?.toLowerCase();
-  if (env === "sandbox" || env === "test") return "sandbox";
-  if (env === "production" || env === "live") return "production";
+  const { clientSecret } = cashfreePgKeys();
+  if (clientSecret.includes("_prod_")) return "production";
+  if (clientSecret.includes("_test_")) return "sandbox";
   return null;
 }
 
 /** Returns a user-facing error when env and API keys disagree. */
 export function getCashfreePgConfigError(): string | null {
   if (!isCashfreePgConfigured()) {
-    return "Cashfree payment gateway is not configured";
+    const mode = cashfreePgMode();
+    return mode === "production"
+      ? "Cashfree live keys missing. Set CASHFREE_PG_CLIENT_ID_LIVE and CASHFREE_PG_CLIENT_SECRET_LIVE."
+      : "Cashfree test keys missing. Set CASHFREE_PG_CLIENT_ID_TEST and CASHFREE_PG_CLIENT_SECRET_TEST.";
   }
 
   const credentialMode = cashfreePgCredentialMode();
-  const envOverride = cashfreePgEnvOverride();
-  if (credentialMode && envOverride && credentialMode !== envOverride) {
+  const mode = cashfreePgMode();
+  if (credentialMode && credentialMode !== mode) {
     return (
-      `Cashfree keys mismatch: your secret is for ${credentialMode} but ` +
-      `CASHFREE_PG_ENV=${process.env.CASHFREE_PG_ENV}. ` +
-      `Set CASHFREE_PG_ENV=${credentialMode} or use matching API keys.`
+      `Cashfree keys mismatch: ${mode} mode is active but the secret looks like ${credentialMode}. ` +
+      `Use _TEST keys for localhost and _LIVE keys for worthkart.in.`
     );
-  }
-
-  if (cashfreePgMode() === "production") {
-    const returnUrl = `${getAppBaseUrl()}/checkout/return`;
-    if (!returnUrl.startsWith("https://")) {
-      return (
-        "Cashfree production requires an HTTPS return URL. " +
-        "Set NEXTAUTH_URL to your https domain (e.g. ngrok tunnel), " +
-        "or use sandbox Payment Gateway keys for local testing."
-      );
-    }
   }
 
   return null;
 }
 
 export function cashfreePgBaseUrl(): string {
-  const credentialMode = cashfreePgCredentialMode();
-  const envOverride = cashfreePgEnvOverride();
-
-  if (credentialMode && envOverride && credentialMode !== envOverride) {
-    console.warn(
-      `[cashfree] CASHFREE_PG_ENV=${process.env.CASHFREE_PG_ENV} conflicts with ` +
-        `${credentialMode} keys — using ${credentialMode} API`
-    );
-    return credentialMode === "production"
-      ? "https://api.cashfree.com"
-      : "https://sandbox.cashfree.com";
-  }
-
-  if (envOverride === "sandbox") return "https://sandbox.cashfree.com";
-  if (envOverride === "production") return "https://api.cashfree.com";
-
-  return credentialMode === "production"
+  return cashfreePgMode() === "production"
     ? "https://api.cashfree.com"
     : "https://sandbox.cashfree.com";
 }
@@ -112,24 +119,20 @@ export function cashfreeBaseUrl(): string {
   return cashfreePgBaseUrl();
 }
 
-export function cashfreePgMode(): "sandbox" | "production" {
-  return cashfreePgBaseUrl().includes("sandbox") ? "sandbox" : "production";
-}
-
 /** @deprecated Use cashfreePgMode */
 export function cashfreeMode(): "sandbox" | "production" {
   return cashfreePgMode();
 }
 
 export function cashfreePgClientId(): string {
-  return process.env.CASHFREE_PG_CLIENT_ID || "";
+  return cashfreePgKeys().clientId;
 }
 
 export function cashfreePgHeaders(): Record<string, string> {
   return {
     "Content-Type": "application/json",
-    "x-client-id": cashfreePgClientId(),
-    "x-client-secret": process.env.CASHFREE_PG_CLIENT_SECRET || "",
+    "x-client-id": cashfreePgKeys().clientId,
+    "x-client-secret": cashfreePgKeys().clientSecret,
     "x-api-version": CASHFREE_PG_API_VERSION,
   };
 }
